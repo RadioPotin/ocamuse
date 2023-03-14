@@ -1,0 +1,3 @@
+(executable
+ (name ocamuse)
+ (modules ocamuse))
