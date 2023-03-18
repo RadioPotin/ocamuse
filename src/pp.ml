@@ -30,7 +30,7 @@ let print_notes fmt notes =
         ~pp_sep:(fun fmt () -> Format.fprintf fmt " ")
         print_note) notes
 
-let print_chord fmt =
+let print_diatonic_chord fmt =
   let open Types in
   fun (chord : diatonic_triad) ->
     match chord with
@@ -41,14 +41,13 @@ let print_chord fmt =
     | Diminished ->
       Format.fprintf fmt "dim"
 
-
-let print_chord =
+let print_diatonic_chord =
   let open Types in
   fun fmt ({base; alteration}, chord) ->
-    Format.fprintf fmt "%a%a%a" print_base_note base print_alteration alteration print_chord chord
+    Format.fprintf fmt "%a%a%a" print_base_note base print_alteration alteration print_diatonic_chord chord
 
-let print_chords fmt chords =
+let print_diatonic_chords fmt chords =
   Format.fprintf fmt "- %a@\n"
     (Format.pp_print_list
         ~pp_sep:(fun fmt ()-> Format.fprintf fmt " ")
-        print_chord) chords
+        print_diatonic_chord) chords

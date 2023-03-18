@@ -98,7 +98,9 @@ let build_diatonic_triads_sequence mode note =
   let tonality =
     build_tonality mode note
   in
-  List.map2 (fun chord note -> (note, chord) ) diatonic_chord_sequence tonality
+  List.map2
+    (fun chord note -> (note, chord))
+    diatonic_chord_sequence tonality
 
 let note_of_string s =
   let open Types in
@@ -158,4 +160,4 @@ let () =
     let mode = mode_of_string Sys.argv.(1) in
     let note = note_of_string Sys.argv.(2) in
     Pp.print_notes fmt @@ build_tonality mode note;
-    Pp.print_chords fmt @@ build_diatonic_triads_sequence mode note
+    Pp.print_diatonic_chords fmt @@ build_diatonic_triads_sequence mode note
