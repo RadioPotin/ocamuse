@@ -1,5 +1,7 @@
 # Sources for present and future developments
 
+- [Fretboard math](http://passyworldofmathematics.com/guitar-mathematics/)
+- [More math](https://www.guitarnoise.com/lessons/from-math-to-music/)
 - [General music theory Memo](https://en.wikibooks.org/wiki/Music_Theory/Scales_and_Intervals)
 - [Big list of Modes and Scales](https://en.wikipedia.org/wiki/List_of_musical_scales_and_modes)
 - [Oolimo, greatest web-app ever made](https://www.oolimo.com/index.php)

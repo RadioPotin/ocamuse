@@ -17,11 +17,11 @@ type base_note =
   | F
   | G
 
-(** [note] is a record of a base_note and an alteration represented by an int which distance to 0 equals  *)
+(** [note] is a record of a base_note and an alteration represented by an int
+    which distance to 0 equals *)
 type note =
-  {
-    base : base_note;
-    alteration: int;
+  { base : base_note
+  ; alteration : int
   }
 
 type chord =
