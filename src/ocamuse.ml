@@ -1,3 +1,10 @@
+let name_chord =
+  let open Types in
+  fun (root : note) (chord_type : chord) : string ->
+    let base_str = Pp.sprint_note root in
+    let suffix_str = Conv.chord_to_string chord_type in
+    base_str ^ suffix_str
+
 (** [mode_rotation_int mode] takes a mode and returns the number of rotation
     required to find its intervalic formula once applied to the formula of the
     C_mode *)
@@ -11,41 +18,6 @@ let mode_rotation_int =
   | G_mode -> 4
   | A_mode -> 5
   | B_mode -> 6
-
-let note_of_string s =
-  let open Types in
-  if String.length s < 2 then invalid_arg "note_of_string"
-  else
-    let base =
-      match s.[0] with
-      | 'a' -> A
-      | 'b' -> B
-      | 'c' -> C
-      | 'd' -> D
-      | 'e' -> E
-      | 'f' -> F
-      | 'g' -> G
-      | _ -> invalid_arg "note_of_string"
-    in
-    let sub = String.sub s 1 (String.length s - 1) in
-    let alteration =
-      match int_of_string_opt sub with
-      | None -> failwith "invalid_arg"
-      | Some s -> s
-    in
-    { base; alteration }
-
-let mode_of_string =
-  let open Types in
-  function
-  | "A" -> A_mode
-  | "B" -> B_mode
-  | "C" -> C_mode
-  | "D" -> D_mode
-  | "E" -> E_mode
-  | "F" -> F_mode
-  | "G" -> G_mode
-  | _ -> invalid_arg "mode_of_string"
 
 (** [rotate_list_n l n] rotates the elements of l n times to the left *)
 let rec rotate_list_n l n =
@@ -120,7 +92,7 @@ let () =
     failwith @@ Format.sprintf "Usage: %s <mode> <note>" Sys.argv.(0)
   else
     let fmt = Format.std_formatter in
-    let mode = mode_of_string Sys.argv.(1) in
-    let note = note_of_string Sys.argv.(2) in
+    let mode = Conv.mode_of_string Sys.argv.(1) in
+    let note = Conv.note_of_string Sys.argv.(2) in
     Pp.print_notes fmt @@ build_tonality mode note;
     Pp.print_diatonic_chords fmt @@ build_diatonic_triads_sequence mode note

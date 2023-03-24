@@ -1,3 +1,7 @@
 (executable
  (name ocamuse)
- (modules ocamuse types pp))
+ (modules ocamuse types conv pp fretboard))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))

@@ -19,6 +19,11 @@ let rec print_alteration fmt n =
     Format.fprintf fmt "b";
     print_alteration fmt (n + 1)
 
+let sprint_note =
+  let open Types in
+  fun { base; alteration } ->
+    Format.asprintf "%a%a" print_base_note base print_alteration alteration
+
 let print_note =
   let open Types in
   fun fmt { base; alteration } ->
@@ -38,6 +43,13 @@ let print_diatonic_chord fmt =
     | Major -> Format.fprintf fmt ""
     | Minor -> Format.fprintf fmt "m"
     | Diminished -> Format.fprintf fmt "dim"
+
+let print_chord_quality fmt =
+  let open Types in
+  fun (chord : chord) -> Format.fprintf fmt "%s" @@ Conv.chord_to_string chord
+
+let print_chord fmt (note, chord) =
+  Format.fprintf fmt "%a%a" print_note note print_chord_quality chord
 
 let print_diatonic_chord =
   let open Types in
