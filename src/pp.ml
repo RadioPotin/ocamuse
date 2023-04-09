@@ -35,101 +35,110 @@ module Color = struct
       Format.pp_print_flush ()
 end
 
-let print_base_note fmt =
-  let open Types in
-  function
-  | A -> Format.fprintf fmt "A"
-  | B -> Format.fprintf fmt "B"
-  | C -> Format.fprintf fmt "C"
-  | D -> Format.fprintf fmt "D"
-  | E -> Format.fprintf fmt "E"
-  | F -> Format.fprintf fmt "F"
-  | G -> Format.fprintf fmt "G"
+module Notes = struct
+  let print_base_note fmt =
+    let open Types in
+    function
+    | A -> Format.fprintf fmt "A"
+    | B -> Format.fprintf fmt "B"
+    | C -> Format.fprintf fmt "C"
+    | D -> Format.fprintf fmt "D"
+    | E -> Format.fprintf fmt "E"
+    | F -> Format.fprintf fmt "F"
+    | G -> Format.fprintf fmt "G"
 
-let rec print_alteration fmt n =
-  match n with
-  | 0 -> ()
-  | n when n > 0 ->
-    Format.fprintf fmt "#";
-    print_alteration fmt (n - 1)
-  | _ ->
-    Format.fprintf fmt "b";
-    print_alteration fmt (n + 1)
+  let rec print_alteration fmt n =
+    match n with
+    | 0 -> ()
+    | n when n > 0 ->
+      Format.fprintf fmt "#";
+      print_alteration fmt (n - 1)
+    | _ ->
+      Format.fprintf fmt "b";
+      print_alteration fmt (n + 1)
 
-let sprint_note =
-  let open Types in
-  fun { base; alteration } ->
-    Format.asprintf "%a%a" print_base_note base print_alteration alteration
+  let sprint_note =
+    let open Types in
+    fun { base; alteration } ->
+      Format.asprintf "%a%a" print_base_note base print_alteration alteration
 
-let print_note =
-  let open Types in
-  fun fmt { base; alteration } ->
-    Format.fprintf fmt "%a%a" print_base_note base print_alteration alteration
+  let print_note =
+    let open Types in
+    fun fmt { base; alteration } ->
+      Format.fprintf fmt "%a%a" print_base_note base print_alteration alteration
 
-let print_notes fmt notes =
-  Format.fprintf fmt "- %a@\n"
-    (Format.pp_print_list
-       ~pp_sep:(fun fmt () -> Format.fprintf fmt " ")
-       print_note )
-    notes
+  let print_notes fmt notes =
+    Format.fprintf fmt "- %a@\n"
+      (Format.pp_print_list
+         ~pp_sep:(fun fmt () -> Format.fprintf fmt " ")
+         print_note )
+      notes
 
-let print_diatonic_chord fmt =
-  let open Types in
-  fun (chord : diatonic_triad) ->
-    match chord with
-    | Major -> Format.fprintf fmt ""
-    | Minor -> Format.fprintf fmt "m"
-    | Diminished -> Format.fprintf fmt "dim"
+  let print_diatonic_chord fmt =
+    let open Types in
+    fun (chord : diatonic_triad) ->
+      match chord with
+      | Major -> Format.fprintf fmt ""
+      | Minor -> Format.fprintf fmt "m"
+      | Diminished -> Format.fprintf fmt "dim"
 
-let print_chord_quality fmt =
-  let open Types in
-  fun (chord : chord) -> Format.fprintf fmt "%s" @@ Conv.chord_to_string chord
+  let print_chord_quality fmt =
+    let open Types in
+    fun (chord : chord) -> Format.fprintf fmt "%s" @@ Conv.chord_to_string chord
 
-let print_chord fmt (note, chord) =
-  Format.fprintf fmt "%a%a" print_note note print_chord_quality chord
+  let print_chord fmt (note, chord) =
+    Format.fprintf fmt "%a%a" print_note note print_chord_quality chord
 
-let print_diatonic_chord =
-  let open Types in
-  fun fmt ({ base; alteration }, chord) ->
-    Format.fprintf fmt "%a%a%a" print_base_note base print_alteration alteration
-      print_diatonic_chord chord
+  let print_diatonic_chord =
+    let open Types in
+    fun fmt ({ base; alteration }, chord) ->
+      Format.fprintf fmt "%a%a%a" print_base_note base print_alteration
+        alteration print_diatonic_chord chord
 
-let print_diatonic_chords fmt chords =
-  Format.fprintf fmt "- %a@\n"
-    (Format.pp_print_list
-       ~pp_sep:(fun fmt () -> Format.fprintf fmt " ")
-       print_diatonic_chord )
-    chords
+  let print_diatonic_chords fmt chords =
+    Format.fprintf fmt "- %a@\n"
+      (Format.pp_print_list
+         ~pp_sep:(fun fmt () -> Format.fprintf fmt " ")
+         print_diatonic_chord )
+      chords
+end
 
-let guitar_string fmt l =
-  Format.pp_print_list
-    ~pp_sep:(fun fmt () -> Format.fprintf fmt "|")
-    (fun fmt note -> Format.fprintf fmt "%2s" @@ sprint_note note)
-    fmt l
+module Fretboard = struct
+  let display_fret fmt note =
+    match Conv.note_to_int note with
+    | 1 | 4 | 6 | 9 | 11 ->
+      Format.fprintf fmt {||  %a  ||} Notes.print_note note
+    | _n -> Format.fprintf fmt {||  %a   ||} Notes.print_note note
 
-let fret_numbering fmt ~range =
-  Format.fprintf fmt "  ";
-  for i = 1 to range - 1 do
-    Format.fprintf fmt "%d| " i
-  done;
-  Format.fprintf fmt "@\n"
+  let guitar_string fmt l =
+    Format.pp_print_list
+      ~pp_sep:(fun fmt () -> Format.fprintf fmt "")
+      display_fret fmt l
 
-let print_board fmt board =
-  let place_string_number fmt (i, s) =
-    Format.fprintf fmt "%d%a" i guitar_string s
-  in
+  let fret_numbering fmt ~range =
+    Format.fprintf fmt "   |  %2d  |" 1;
+    for i = 2 to range - 1 do
+      Format.fprintf fmt "|  %2d  |" i
+    done;
+    Format.fprintf fmt "@\n"
 
-  List.iteri
-    (fun i string ->
-      if i = 0 then begin
-        let range = List.length @@ List.hd board in
-        fret_numbering fmt ~range;
-        place_string_number fmt (i, string)
-      end
-      else place_string_number fmt (i, string);
-      Format.fprintf fmt "@\n" )
-    board
+  let print_board fmt board =
+    let place_string_number fmt (i, s) =
+      Format.fprintf fmt "%d |%a" i guitar_string s
+    in
 
-let fretboard fmt ~tuning ~range =
-  let top_of_fretboard = Fretboard.init_fretboard ~tuning () in
-  Format.fprintf fmt {|%a|} print_board top_of_fretboard
+    List.iteri
+      (fun i string ->
+        if i = 0 then begin
+          let range = List.length @@ List.hd board in
+          fret_numbering fmt ~range;
+          place_string_number fmt (i + 1, string)
+        end
+        else place_string_number fmt (i + 1, string);
+        Format.fprintf fmt "@\n" )
+      board
+
+  let fb fmt ~tuning =
+    let top_of_fretboard = Fretboard.init_fretboard ~tuning () in
+    Format.fprintf fmt "- Fretmap:@\n%a" print_board top_of_fretboard
+end

@@ -51,8 +51,7 @@ let () =
       (fun note -> Types.{ base = note; alteration = 0 })
       [ E; A; D; G; B; E ]
   in
-  Pp.print_notes fmt @@ Ocamuse.build_tonality mode note;
-  Pp.print_diatonic_chords fmt @@ build_diatonic_triads_sequence mode note;
-  Pp.fretboard fmt
+  Pp.Notes.print_notes fmt @@ Ocamuse.build_tonality mode note;
+  Pp.Notes.print_diatonic_chords fmt @@ build_diatonic_triads_sequence mode note;
+  Pp.Fretboard.fb fmt
     ~tuning:(Option.value !tuning ~default:(default_tuning ()))
-    ~range:27

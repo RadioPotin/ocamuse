@@ -1,7 +1,7 @@
 let name_chord =
   let open Types in
   fun (root : note) (chord_type : chord) : string ->
-    let base_str = Pp.sprint_note root in
+    let base_str = Pp.Notes.sprint_note root in
     let suffix_str = Conv.chord_to_string chord_type in
     base_str ^ suffix_str
 
@@ -109,7 +109,7 @@ let generate_chord (root_note : Types.note) (chord_type : Types.chord) :
 (*
   TODO:
     * suite d'accords d'une tonalité donnée [x]
-    * Fretboard print                       []
+    * Fretboard print                       [x]
     * Tabs                                  []
       * map to fretboard                    []
       * function to print sequence          []
