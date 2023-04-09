@@ -43,20 +43,4 @@ type diatonic_triad =
   | Minor
   | Diminished
 
-module Fretboard = struct
-  type note =
-    | A
-    | Ash_Bfl
-    | B
-    | C
-    | Csh_Dfl
-    | D
-    | Dsh_Efl
-    | E
-    | F
-    | Fsh_Gfl
-    | G
-    | Gsh_Afl
-
-  type tuning = note list
-end
+type tuning = note list

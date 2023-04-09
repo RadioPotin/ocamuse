@@ -50,71 +50,45 @@ let mode_of_string =
   | "G" -> G_mode
   | _ -> invalid_arg "mode_of_string"
 
-let fretnote_to_note =
-  let open Types.Fretboard in
-  function
-  | A -> Types.{ base = A; alteration = 0 }
-  | Ash_Bfl -> Types.{ base = A; alteration = 1 }
-  | B -> Types.{ base = B; alteration = 0 }
-  | C -> Types.{ base = C; alteration = 0 }
-  | Csh_Dfl -> { base = C; alteration = 1 }
-  | D -> Types.{ base = D; alteration = 0 }
-  | Dsh_Efl -> Types.{ base = D; alteration = 1 }
-  | E -> Types.{ base = E; alteration = 0 }
-  | F -> Types.{ base = F; alteration = 0 }
-  | Fsh_Gfl -> Types.{ base = F; alteration = 1 }
-  | G -> Types.{ base = G; alteration = 0 }
-  | Gsh_Afl -> Types.{ base = G; alteration = 1 }
-
-let note_to_fretnote =
+let note_to_int =
   let open Types in
-  fun note ->
-    let base = note.base in
-    let alteration = note.alteration in
-    match (base, alteration) with
-    | A, 0 | B, -2 -> Types.Fretboard.A
-    | A, 1 | B, -1 -> Types.Fretboard.Ash_Bfl
-    | B, 0 -> Types.Fretboard.B
-    | C, 0 -> Types.Fretboard.C
-    | C, 1 | D, -1 -> Types.Fretboard.Csh_Dfl
-    | D, 0 -> Types.Fretboard.D
-    | D, 1 | E, -1 -> Types.Fretboard.Dsh_Efl
-    | E, 0 -> Types.Fretboard.E
-    | F, 0 -> Types.Fretboard.F
-    | F, 1 | G, -1 -> Types.Fretboard.Fsh_Gfl
-    | G, 0 -> Types.Fretboard.G
-    | G, 1 | A, -1 -> Types.Fretboard.Gsh_Afl
-    | _ -> invalid_arg "note_to_fretnote, alteration not handled"
-
-let int_of_fret_note =
-  let open Types.Fretboard in
   function
-  | A -> 0
-  | Ash_Bfl -> 1
-  | B -> 2
-  | C -> 3
-  | Csh_Dfl -> 4
-  | D -> 5
-  | Dsh_Efl -> 6
-  | E -> 7
-  | F -> 8
-  | Fsh_Gfl -> 9
-  | G -> 10
-  | Gsh_Afl -> 11
+  | { base = A; alteration = 0 } -> 0
+  | { base = A; alteration = 1 } | { base = B; alteration = -1 } -> 1
+  | { base = B; alteration = 0 } -> 2
+  | { base = C; alteration = 0 } -> 3
+  | { base = C; alteration = 1 } | { base = D; alteration = -1 } -> 4
+  | { base = D; alteration = 0 } -> 5
+  | { base = D; alteration = 1 } | { base = E; alteration = -1 } -> 6
+  | { base = E; alteration = 0 } -> 7
+  | { base = F; alteration = 0 } -> 8
+  | { base = F; alteration = 1 } | { base = G; alteration = -1 } -> 9
+  | { base = G; alteration = 0 } -> 10
+  | { base = G; alteration = 1 } | { base = A; alteration = -1 } -> 11
+  | _ -> assert false
 
-let fret_note_of_int =
-  let open Types.Fretboard in
+type alt =
+  | Sharp
+  | Flat
+
+let rec int_to_note p_alt =
+  let open Types in
+  let alter (sharp, flat) =
+    match p_alt with
+    | Sharp -> { base = sharp; alteration = 1 }
+    | Flat -> { base = flat; alteration = -1 }
+  in
   function
-  | 0 -> A
-  | 1 -> Ash_Bfl
-  | 2 -> B
-  | 3 -> C
-  | 4 -> Csh_Dfl
-  | 5 -> D
-  | 6 -> Dsh_Efl
-  | 7 -> E
-  | 8 -> F
-  | 9 -> Fsh_Gfl
-  | 10 -> G
-  | 11 -> Gsh_Afl
-  | n -> invalid_arg ("fret_note_of_int: " ^ string_of_int n)
+  | 0 -> { base = A; alteration = 0 }
+  | 1 -> alter (A, B)
+  | 2 -> { base = B; alteration = 0 }
+  | 3 -> { base = C; alteration = 0 }
+  | 4 -> alter (C, D)
+  | 5 -> { base = D; alteration = 0 }
+  | 6 -> alter (D, E)
+  | 7 -> { base = E; alteration = 0 }
+  | 8 -> { base = F; alteration = 0 }
+  | 9 -> alter (F, G)
+  | 10 -> { base = G; alteration = 0 }
+  | 11 -> alter (G, A)
+  | n -> int_to_note p_alt (n - 12)

@@ -48,21 +48,23 @@ let get_next_base_note_distance =
   function C -> 2 | D -> 2 | E -> 1 | F -> 2 | G -> 2 | A -> 2 | B -> 1
 
 (** [get_next_note note] takes a base_note and returns the next one *)
-let get_next_note =
+let get_next_base_note =
   let open Types in
   function C -> D | D -> E | E -> F | F -> G | G -> A | A -> B | B -> C
 
-let get_next_note =
+let get_next_degree =
   let open Types in
   fun { base; alteration } interval ->
     let distance = get_next_base_note_distance base in
-    { base = get_next_note base; alteration = interval - distance + alteration }
+    { base = get_next_base_note base
+    ; alteration = interval - distance + alteration
+    }
 
 let rec compute_tonality mode note =
   match mode with
   | [] -> [] (* | [] -> [ note ] if we want C D E F G A B C *)
   | interval :: mode ->
-    let next = get_next_note note interval in
+    let next = get_next_degree note interval in
     note :: compute_tonality mode next
 
 let build_tonality mode note =
@@ -74,9 +76,40 @@ let build_diatonic_triads_sequence mode note =
   let tonality = build_tonality mode note in
   List.map2 (fun chord note -> (note, chord)) diatonic_chord_sequence tonality
 
+(** [generate_chord note chord_type] generates a list of [note]s for the chord
+    defined by [chord_type] with [note] as the root note
+let generate_chord (root_note : Types.note) (chord_type : Types.chord) :
+    Types.note list =
+  let intervals =
+    match chord_type with
+    | Major -> [ 0; 4; 7 ]
+    | Minor -> [ 0; 3; 7 ]
+    | Dimin -> [ 0; 3; 6 ]
+    | Augment -> [ 0; 4; 8 ]
+    | Suspend2 -> [ 0; 2; 7 ]
+    | Suspend4 -> [ 0; 5; 7 ]
+    | Major7 -> [ 0; 4; 7; 11 ]
+    | Domin7 -> [ 0; 4; 7; 10 ]
+    | Minor7 -> [ 0; 3; 7; 10 ]
+    | HalfDim7 -> [ 0; 3; 6; 10 ]
+    | Sixth -> [ 0; 4; 7; 9 ]
+    | MinorSixth -> [ 0; 3; 7; 9 ]
+  in
+  let note_to_add_semitones_to = { root_note with alteration = 0 } in
+  let rec generate_chord_helper notes intervals_remaining =
+    match intervals_remaining with
+    | [] -> List.rev notes
+    | hd :: tl ->
+      let next_note = add_semitones note_to_add_semitones_to hd in
+      generate_chord_helper (next_note :: notes) tl
+  in
+  generate_chord_helper [ root_note ] intervals
+ *)
+
 (*
   TODO:
     * suite d'accords d'une tonalité donnée [x]
+    * Fretboard print                       []
     * Tabs                                  []
       * map to fretboard                    []
       * function to print sequence          []
@@ -86,13 +119,3 @@ let build_diatonic_triads_sequence mode note =
     * generer du midi                       []
     * generer partoche pdf                  []
  *)
-
-let () =
-  if Array.length Sys.argv <> 3 then
-    failwith @@ Format.sprintf "Usage: %s <mode> <note>" Sys.argv.(0)
-  else
-    let fmt = Format.std_formatter in
-    let mode = Conv.mode_of_string Sys.argv.(1) in
-    let note = Conv.note_of_string Sys.argv.(2) in
-    Pp.print_notes fmt @@ build_tonality mode note;
-    Pp.print_diatonic_chords fmt @@ build_diatonic_triads_sequence mode note
