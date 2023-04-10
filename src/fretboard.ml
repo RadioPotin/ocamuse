@@ -38,7 +38,7 @@ let init_string =
 
 let init_fretboard =
   let open Types in
-  fun ~(tuning : tuning) ?(range : int = 14) () : note list list ->
+  fun ~(tuning : tuning) ?(range : int = 13) () : note list list ->
     mapi_down_strings
       (fun guitar_str_nb note -> init_string guitar_str_nb note range)
       tuning

@@ -107,38 +107,48 @@ module Fretboard = struct
   let display_fret fmt note =
     match Conv.note_to_int note with
     | 1 | 4 | 6 | 9 | 11 ->
-      Format.fprintf fmt {||  %a  ||} Notes.print_note note
-    | _n -> Format.fprintf fmt {||  %a   ||} Notes.print_note note
+      Format.fprintf fmt {||--%a--||} Notes.print_note note
+    | _n -> Format.fprintf fmt {||---%a--||} Notes.print_note note
 
   let guitar_string fmt l =
-    Format.pp_print_list
-      ~pp_sep:(fun fmt () -> Format.fprintf fmt "")
-      display_fret fmt l
+    List.iteri
+      (fun fret_nb note ->
+        if fret_nb = 0 then Format.fprintf fmt "|%a" Notes.print_note note
+        else Format.fprintf fmt "%a" display_fret note )
+      l
 
   let fret_numbering fmt ~range =
-    Format.fprintf fmt "   |  %2d  |" 1;
-    for i = 2 to range - 1 do
+    Format.fprintf fmt "  ||%d" 0;
+    for i = 1 to range - 1 do
       Format.fprintf fmt "|  %2d  |" i
     done;
     Format.fprintf fmt "@\n"
+
+  let dots fmt ~range =
+    Format.fprintf fmt "     ";
+    for i = 1 to range - 1 do
+      if i = 3 || i = 5 || i = 7 || i = 9 || i = 12 then
+        Format.fprintf fmt "    ·   "
+      else Format.fprintf fmt "        "
+    done
 
   let print_board fmt board =
     let place_string_number fmt (i, s) =
       Format.fprintf fmt "%d |%a" i guitar_string s
     in
 
+    let range = List.length @@ List.hd board in
     List.iteri
       (fun i string ->
+        let real_nb = i + 1 in
         if i = 0 then begin
-          let range = List.length @@ List.hd board in
           fret_numbering fmt ~range;
-          place_string_number fmt (i + 1, string)
+          place_string_number fmt (real_nb, string)
         end
-        else place_string_number fmt (i + 1, string);
+        else place_string_number fmt (real_nb, string);
         Format.fprintf fmt "@\n" )
-      board
+      board;
+    dots fmt ~range
 
-  let fb fmt ~tuning =
-    let top_of_fretboard = Fretboard.init_fretboard ~tuning () in
-    Format.fprintf fmt "- Fretmap:@\n%a" print_board top_of_fretboard
+  let fb fmt ~fb = Format.fprintf fmt "- Fretmap:@\n%a" print_board fb
 end

@@ -53,5 +53,9 @@ let () =
   in
   Pp.Notes.print_notes fmt @@ Ocamuse.build_tonality mode note;
   Pp.Notes.print_diatonic_chords fmt @@ build_diatonic_triads_sequence mode note;
-  Pp.Fretboard.fb fmt
-    ~tuning:(Option.value !tuning ~default:(default_tuning ()))
+  let fb =
+    Fretboard.init_fretboard
+      ~tuning:(Option.value !tuning ~default:(default_tuning ()))
+      ()
+  in
+  Pp.Fretboard.fb fmt ~fb
