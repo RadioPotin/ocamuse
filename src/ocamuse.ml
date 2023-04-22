@@ -110,6 +110,8 @@ let build_diatonic_triads_sequence mode note =
   TODO:
     * suite d'accords d'une tonalité donnée [x]
     * Fretboard print                       [x]
+    * Chord diagrams                        []
+    * Scale degree sequence (progressions)  []
     * Tabs                                  []
       * map to fretboard                    []
       * function to print sequence          []

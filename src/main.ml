@@ -1,10 +1,6 @@
-open Ocamuse
-
 let stop () = failwith @@ Format.sprintf "Usage: %s <mode> <note>" Sys.argv.(0)
 
-let help () =
-  Format.printf "Uuuuh";
-  exit 2
+let help () = stop ()
 
 let usage () = help ()
 
@@ -52,10 +48,14 @@ let () =
       [ E; A; D; G; B; E ]
   in
   Pp.Notes.print_notes fmt @@ Ocamuse.build_tonality mode note;
-  Pp.Notes.print_diatonic_chords fmt @@ build_diatonic_triads_sequence mode note;
-  let fb =
+  Pp.Notes.print_diatonic_chords fmt
+  @@ Ocamuse.build_diatonic_triads_sequence mode note;
+  let board =
     Fretboard.init_fretboard
       ~tuning:(Option.value !tuning ~default:(default_tuning ()))
       ()
   in
-  Pp.Fretboard.fb fmt ~fb
+  Pp.Fretboard.plain fmt board
+(*
+  ;
+  Pp.Fretboard.fb fmt (board, Pp.print_root note)*)

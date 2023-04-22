@@ -1,6 +1,6 @@
 (executable
  (name main)
- (modules main ocamuse types conv fretboard pp))
+ (modules ocamuse types conv fretboard pp main))
 
 (env
  (dev
