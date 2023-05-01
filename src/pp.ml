@@ -124,65 +124,7 @@ module Notes = struct
       chords
 end
 
-module Fretboard = struct
-  let fret_numbering fmt ~range =
-    Format.fprintf fmt "  ||   %d  |" 0;
-    for i = 1 to range - 1 do
-      Format.fprintf fmt "|  %2d  |" i
-    done;
-    Format.fprintf fmt "@\n"
-
-  let dots fmt ~range =
-    for i = 0 to range - 1 do
-      if i = 0 || i = 1 || i = 2 then Format.fprintf fmt "         "
-      else if i = 3 || i = 5 || i = 7 || i = 9 || i = 12 then
-        Format.fprintf fmt "    ·   "
-      else Format.fprintf fmt "        "
-    done;
-    Format.pp_print_newline fmt ()
-
-  let place_string_number fmt (i, f, s) : unit =
-    Format.fprintf fmt "%d |%a" i f s
-
-  let display_fret fmt (fret_nb, note) : unit =
-    if fret_nb = 0 then Format.fprintf fmt "|%a" Notes.print_note note
-    else
-      match Conv.note_to_int note with
-      | 1 | 4 | 6 | 9 | 11 ->
-        Format.fprintf fmt {||--%a--||} Notes.print_note note
-      | _n -> Format.fprintf fmt {||---%a--||} Notes.print_note note
-
-  let iteri_down_strings fmt (fi : Format.formatter -> 'a -> unit) l : unit =
-    let rec iteri_down_strings i = function
-      | [] -> ()
-      | a :: l ->
-        fi fmt (i, a);
-        iteri_down_strings (i - 1) l
-    in
-    iteri_down_strings (List.length l) l
-
-  let guitar_string fmt (f, l) : unit = iteri_down_strings fmt f l
-
-  let plain_string fmt string_ : unit = guitar_string fmt (display_fret, string_)
-
-  let print_board fmt (board, f) : unit =
-    let range = List.length @@ List.hd board in
-    List.iteri
-      (fun i corde ->
-        let real_nb = i + 1 in
-        if i = 0 then begin
-          fret_numbering fmt ~range;
-          place_string_number fmt (real_nb, f, corde)
-        end
-        else place_string_number fmt (real_nb, f, corde);
-        Format.fprintf fmt "@\n" )
-      board;
-    dots fmt ~range
-
-  let plain fmt b : unit = print_board fmt (b, plain_string)
-
-  let fb = print_board
-end
+module Fretboard = struct end
 
 module Tones = struct end
 
