@@ -25,7 +25,7 @@ let register nb_s range open_note =
 
 let map nb_s range open_note =
   Array.init range (fun i ->
-      match Hashtbl.find_opt coord_to_note_tbl (i, nb_s) with
+      match Hashtbl.find_opt coord_to_note_tbl (i + 1, nb_s) with
       | None -> open_note
       | Some note -> note )
 

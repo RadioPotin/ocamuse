@@ -151,43 +151,55 @@ module Fretboard = struct
 
   let pp_array ~pp_sep fmt ppv arr =
     pp_print_iter ~pp_sep Array.iter ppv fmt arr
-
-  let plain_note fmt arr =
-    pp_array ~pp_sep:(fun _fmt () -> ()) fmt Notes.print_note arr
-
-  let plain fmt arr =
-    pp_array ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n") fmt plain_note arr
-
-  let plain fretboard =
-    let fmt = Format.std_formatter in
-    plain fmt fretboard
+  (* iter functions *)
 
   (** iteri functions *)
   let pp_print_iteri ~pp_sep iteri pp_v ppf v =
     iteri
       (fun i v ->
         pp_v ppf (i, v);
-        pp_sep ppf () )
+        pp_sep i ppf () )
       v
 
   let pp_array_i ~pp_sep fmt ppv arr =
     pp_print_iteri ~pp_sep Array.iteri ppv fmt arr
+  (*  iteri functions *)
 
-  let plain_frets fmt arr =
+  let plain fmt arr =
+    let range = Array.length arr - 1 in
     Array.iter
       (fun arra ->
         pp_array_i
-          ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
+          ~pp_sep:(fun fret_nb fmt () ->
+            if fret_nb mod range = 0 then Format.fprintf fmt "@\n" )
+          fmt
+          (fun fmt (_fret_nb, note) -> Notes.print_note fmt note)
+          arra )
+      arr;
+    Format.pp_print_newline fmt ()
+
+  let plain_frets fmt arr =
+    let range = Array.length arr - 1 in
+    Array.iter
+      (fun arra ->
+        pp_array_i
+          ~pp_sep:(fun fret_nb fmt () ->
+            if fret_nb = range then Format.fprintf fmt "@\n" )
           fmt display_fret arra )
-      arr
+      arr;
+    Format.pp_print_newline fmt ()
 
   let frets fretboard : unit =
     let fmt = Format.std_formatter in
     plain_frets fmt fretboard
 
-  let fb = plain
-
   let fb_with_frets = frets
+
+  let plain fretboard =
+    let fmt = Format.std_formatter in
+    plain fmt fretboard
+
+  let fb = plain
 end
 
 module Tones = struct end
