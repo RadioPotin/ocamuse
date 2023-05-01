@@ -55,4 +55,5 @@ let () =
       ~tuning:(Option.value !tuning ~default:(default_tuning ()))
       ~range:13 ()
   in
-  Pp.Fretboard.fb fb
+  Pp.Fretboard.fb fb;
+  Pp.Fretboard.fb_with_frets fb

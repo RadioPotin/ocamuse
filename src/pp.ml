@@ -124,7 +124,71 @@ module Notes = struct
       chords
 end
 
-module Fretboard = struct end
+module Fretboard = struct
+  (*
+  let print_it fretboard =
+    let buf = Buffer.create 512 in
+    let fmt = Format.formatter_of_buffer buf in
+    Format.fprintf fmt "%a" plain fretboard;
+    Format.printf "\027[2J%s" (Buffer.contents buf);
+    Format.pp_print_flush Format.std_formatter ()
+*)
+  let display_fret fmt (fret_nb, note) =
+    if fret_nb = 0 then Format.fprintf fmt "|%a" Notes.print_note note
+    else
+      match Conv.note_to_int note with
+      | 1 | 4 | 6 | 9 | 11 ->
+        Format.fprintf fmt {||--%a--||} Notes.print_note note
+      | _n -> Format.fprintf fmt {||---%a--||} Notes.print_note note
+
+  (** iter functions *)
+  let pp_print_iter ~pp_sep iter pp_v ppf v =
+    iter
+      (fun v ->
+        pp_v ppf v;
+        pp_sep ppf () )
+      v
+
+  let pp_array ~pp_sep fmt ppv arr =
+    pp_print_iter ~pp_sep Array.iter ppv fmt arr
+
+  let plain_note fmt arr =
+    pp_array ~pp_sep:(fun _fmt () -> ()) fmt Notes.print_note arr
+
+  let plain fmt arr =
+    pp_array ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n") fmt plain_note arr
+
+  let plain fretboard =
+    let fmt = Format.std_formatter in
+    plain fmt fretboard
+
+  (** iteri functions *)
+  let pp_print_iteri ~pp_sep iteri pp_v ppf v =
+    iteri
+      (fun i v ->
+        pp_v ppf (i, v);
+        pp_sep ppf () )
+      v
+
+  let pp_array_i ~pp_sep fmt ppv arr =
+    pp_print_iteri ~pp_sep Array.iteri ppv fmt arr
+
+  let plain_frets fmt arr =
+    Array.iter
+      (fun arra ->
+        pp_array_i
+          ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
+          fmt display_fret arra )
+      arr
+
+  let frets fretboard : unit =
+    let fmt = Format.std_formatter in
+    plain_frets fmt fretboard
+
+  let fb = plain
+
+  let fb_with_frets = frets
+end
 
 module Tones = struct end
 
