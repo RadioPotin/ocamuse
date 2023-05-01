@@ -15,21 +15,25 @@ let chord_to_string =
     | Sixth -> "6"
     | MinorSixth -> "m6"
 
+let base_of_string =
+  let open Types in
+  function
+  | 'a' | 'A' -> A
+  | 'b' | 'B' -> B
+  | 'c' | 'C' -> C
+  | 'd' | 'D' -> D
+  | 'e' | 'E' -> E
+  | 'f' | 'F' -> F
+  | 'g' | 'G' -> G
+  | _ -> invalid_arg "note_of_string"
+
 let note_of_string s =
   let open Types in
-  if String.length s < 2 then invalid_arg "note_of_string"
+  if String.length s < 2 then
+    let base = base_of_string s.[0] in
+    { base; alteration = 0 }
   else
-    let base =
-      match s.[0] with
-      | 'a' | 'A' -> A
-      | 'b' | 'B' -> B
-      | 'c' | 'C' -> C
-      | 'd' | 'D' -> D
-      | 'e' | 'E' -> E
-      | 'f' | 'F' -> F
-      | 'g' | 'G' -> G
-      | _ -> invalid_arg "note_of_string"
-    in
+    let base = base_of_string s.[0] in
     let sub = String.sub s 1 (String.length s - 1) in
     let alteration =
       match int_of_string_opt sub with

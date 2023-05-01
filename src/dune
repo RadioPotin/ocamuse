@@ -1,5 +1,6 @@
 (executable
  (name main)
+ (libraries lambda-term)
  (modules ocamuse types conv fretboard pp main))
 
 (env

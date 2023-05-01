@@ -56,6 +56,3 @@ let () =
       ()
   in
   Pp.Fretboard.plain fmt board
-(*
-  ;
-  Pp.Fretboard.fb fmt (board, Pp.print_root note)*)

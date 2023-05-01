@@ -11,17 +11,6 @@ module Color = struct
      ; "\027[37m" (* white *)
     |]
 
-  let code_of_string = function
-    | "null" -> "\027[0m" (* reset *)
-    | "red" -> "\027[31m" (* red *)
-    | "green" -> "\027[32m" (* green *)
-    | "yellow" -> "\027[33m" (* yellow *)
-    | "blue" -> "\027[34m" (* blue *)
-    | "magenta" -> "\027[35m" (* magenta *)
-    | "cyan" -> "\027[36m" (* cyan *)
-    | "white" -> "\027[37m" (* white *)
-    | _ -> assert false
-
   let colour = ref false
 
   let colour_prefix fmt color =
@@ -30,8 +19,40 @@ module Color = struct
   let colour_suffix fmt () =
     if !colour then colour_prefix fmt 1 else colour_prefix fmt 0
 
-  let colour_wrap fmt (colour, s) =
-    Format.fprintf fmt "%a%s%a%a" colour_prefix colour s colour_suffix ()
+  let colour_wrap fmt (colour, f) =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix colour f () colour_suffix ()
+      Format.pp_print_flush ()
+
+  let null fmt f =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix 0 f () colour_suffix ()
+      Format.pp_print_flush ()
+
+  let red fmt f =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix 1 f () colour_suffix ()
+      Format.pp_print_flush ()
+
+  let green fmt f =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix 2 f () colour_suffix ()
+      Format.pp_print_flush ()
+
+  let yellow fmt f =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix 3 f () colour_suffix ()
+      Format.pp_print_flush ()
+
+  let blue fmt f =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix 4 f () colour_suffix ()
+      Format.pp_print_flush ()
+
+  let magenta fmt f =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix 5 f () colour_suffix ()
+      Format.pp_print_flush ()
+
+  let cyan fmt f =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix 6 f () colour_suffix ()
+      Format.pp_print_flush ()
+
+  let white fmt f =
+    Format.fprintf fmt "%a%a%a%a" colour_prefix 7 f () colour_suffix ()
       Format.pp_print_flush ()
 end
 
@@ -123,6 +144,27 @@ module Fretboard = struct
   let place_string_number fmt (i, f, s) : unit =
     Format.fprintf fmt "%d |%a" i f s
 
+  let display_fret fmt (fret_nb, note) : unit =
+    if fret_nb = 0 then Format.fprintf fmt "|%a" Notes.print_note note
+    else
+      match Conv.note_to_int note with
+      | 1 | 4 | 6 | 9 | 11 ->
+        Format.fprintf fmt {||--%a--||} Notes.print_note note
+      | _n -> Format.fprintf fmt {||---%a--||} Notes.print_note note
+
+  let iteri_down_strings fmt (fi : Format.formatter -> 'a -> unit) l : unit =
+    let rec iteri_down_strings i = function
+      | [] -> ()
+      | a :: l ->
+        fi fmt (i, a);
+        iteri_down_strings (i - 1) l
+    in
+    iteri_down_strings (List.length l) l
+
+  let guitar_string fmt (f, l) : unit = iteri_down_strings fmt f l
+
+  let plain_string fmt string_ : unit = guitar_string fmt (display_fret, string_)
+
   let print_board fmt (board, f) : unit =
     let range = List.length @@ List.hd board in
     List.iteri
@@ -137,32 +179,9 @@ module Fretboard = struct
       board;
     dots fmt ~range
 
-  let iteri_down_strings fmt (fi : Format.formatter -> 'a -> unit) l : unit =
-    let rec iteri_down_strings i = function
-      | [] -> ()
-      | a :: l ->
-        fi fmt (i, a);
-        iteri_down_strings (i - 1) l
-    in
-    iteri_down_strings (List.length l) l
-
-  let display_fret fmt (fret_nb, note) : unit =
-    if fret_nb = 0 then Format.fprintf fmt "|%a" Notes.print_note note
-    else
-      match Conv.note_to_int note with
-      | 1 | 4 | 6 | 9 | 11 ->
-        Format.fprintf fmt {||--%a--||} Notes.print_note note
-      | _n -> Format.fprintf fmt {||---%a--||} Notes.print_note note
-
-  let guitar_string fmt (f, l) : unit = iteri_down_strings fmt f l
-
-  let plain_string fmt string_ : unit = guitar_string fmt (display_fret, string_)
-
   let plain fmt b : unit = print_board fmt (b, plain_string)
 
   let fb = print_board
-
-  (*let print_root note fmt (fret_nb, string) = Format.fprintf fmt "%a"*)
 end
 
 module Tones = struct end
