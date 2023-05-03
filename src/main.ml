@@ -56,4 +56,5 @@ let () =
       ~range:13 ()
   in
   Pp.Fretboard.fb fb;
+  Format.printf "@\n";
   Pp.Fretboard.fb_with_frets fb

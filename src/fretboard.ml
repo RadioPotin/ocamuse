@@ -1,7 +1,7 @@
 let mapi_down_strings mapi strings_l =
   let rec aux_mapi_down_strings strings_mapiacc string_number string_ =
     match string_ with
-    | [] -> List.rev strings_mapiacc
+    | [] -> strings_mapiacc
     | x :: r ->
       let mapiacc = mapi string_number x in
       aux_mapi_down_strings (mapiacc :: strings_mapiacc) (string_number - 1) r
@@ -24,7 +24,7 @@ let register nb_s range open_note =
   done
 
 let map nb_s range open_note =
-  Array.init range (fun i ->
+  Array.init (range - 1) (fun i ->
       match Hashtbl.find_opt coord_to_note_tbl (i + 1, nb_s) with
       | None -> open_note
       | Some note -> note )
