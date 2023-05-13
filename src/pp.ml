@@ -170,16 +170,7 @@ module Fretboard = struct
 
   let fb = plain
 
-  (* fretted keyboard iteri functions *)
-  let print_fret_nb fmt arr =
-    Array.iteri
-      (fun i _v ->
-        if i = 0 then Format.fprintf fmt "  0 "
-        else if i < 10 then Format.fprintf fmt " %2d     " i
-        else Format.fprintf fmt "  %2d    " i )
-      arr;
-    Format.pp_print_newline fmt ()
-
+  (* fretted keyboard print iteri functions *)
   let fret_print_iteri ~pp_sep iteri ppf pp_v arr
       (range, (need_string_nb : bool)) =
     iteri
@@ -209,6 +200,15 @@ module Fretboard = struct
     fret_array_iteri
       ~pp_sep:(fun _fret_nb fmt () -> Format.fprintf fmt "")
       fmt display_fret string false
+
+  let print_fret_nb fmt arr =
+    Array.iteri
+      (fun i _v ->
+        if i = 0 then Format.fprintf fmt "  0 "
+        else if i < 10 then Format.fprintf fmt " %2d     " i
+        else Format.fprintf fmt "  %2d    " i )
+      arr;
+    Format.pp_print_newline fmt ()
 
   let plain_frets fmt arr =
     print_fret_nb fmt arr.(0);
