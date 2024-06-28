@@ -47,12 +47,14 @@ let () =
       (fun note -> Types.{ base = note; alteration = 0 })
       [ E; A; D; G; B; E ]
   in
-  Pp.Notes.print_notes fmt @@ Ocamuse.build_tonality mode note;
-  Pp.Notes.print_diatonic_chords fmt
+  Pp.NOTES.print_notes fmt @@ Ocamuse.build_tonality mode note;
+  Pp.NOTES.print_diatonic_chords fmt
   @@ Ocamuse.build_diatonic_triads_sequence mode note;
-  let board =
-    Fretboard.init_fretboard
+  let fb =
+    Fretboard.init
       ~tuning:(Option.value !tuning ~default:(default_tuning ()))
-      ()
+      ~range:13 ()
   in
-  Pp.Fretboard.plain fmt board
+  Pp.FRETBOARD.fb fb;
+  Format.printf "@\n";
+  Pp.FRETBOARD.fb_with_frets fb

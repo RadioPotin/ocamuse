@@ -1,4 +1,6 @@
-module Color = struct
+(** module COLOR is destined to hold all functions and operations on displaying
+    a colourful output using termcaps for now *)
+module COLOR = struct
   let tablet =
     [| "" (* no clour *)
      ; "\027[0m" (* reset *)
@@ -56,7 +58,7 @@ module Color = struct
       Format.pp_print_flush ()
 end
 
-module Notes = struct
+module NOTES = struct
   let print_base_note fmt =
     let open Types in
     function
@@ -88,7 +90,7 @@ module Notes = struct
     fun fmt { base; alteration } ->
       Format.fprintf fmt "%a%a" print_base_note base print_alteration alteration
 
-  let print_notes fmt notes =
+  let print_notes fmt (notes : Types.note list) =
     Format.fprintf fmt "- %a@\n"
       (Format.pp_print_list
          ~pp_sep:(fun fmt () -> Format.fprintf fmt " ")
@@ -124,64 +126,105 @@ module Notes = struct
       chords
 end
 
-module Fretboard = struct
-  let fret_numbering fmt ~range =
-    Format.fprintf fmt "  ||   %d  |" 0;
-    for i = 1 to range - 1 do
-      Format.fprintf fmt "|  %2d  |" i
-    done;
-    Format.fprintf fmt "@\n"
+module FRETBOARD = struct
+  (*
+   (** originally used for printing subsequent states of the fretboard. This is unused for now because of lack for proper iteration algorithm *)
+  let print_it fretboard =
+    let buf = Buffer.create 512 in
+    let fmt = Format.formatter_of_buffer buf in
+    Format.fprintf fmt "%a" plain fretboard;
+    Format.printf "\027[2J%s" (Buffer.contents buf);
+    Format.pp_print_flush Format.std_formatter ()
+*)
+  (** plain fretboard print iteri functions *)
+  let plain_print_iteri ~pp_sep iteri ppf pp_v arr
+      (range, (need_string_nb : bool)) =
+    iteri
+      (fun i v ->
+        if need_string_nb then Format.fprintf ppf "%d" (i + 1);
+        pp_v ppf (i, v);
+        if i < range - 1 then pp_sep i ppf () )
+      arr
 
-  let dots fmt ~range =
-    for i = 0 to range - 1 do
-      if i = 0 || i = 1 || i = 2 then Format.fprintf fmt "         "
-      else if i = 3 || i = 5 || i = 7 || i = 9 || i = 12 then
-        Format.fprintf fmt "    ·   "
-      else Format.fprintf fmt "        "
-    done;
+  let plain_array_iteri ~pp_sep fmt ppv arr (string_nb : bool) =
+    let range = Array.length arr in
+    plain_print_iteri ~pp_sep Array.iteri fmt ppv arr (range, string_nb)
+
+  let plain_matrix_iteri ~pp_sep fmt ppv arr =
+    plain_array_iteri ~pp_sep fmt ppv arr true
+
+  (* display notes plainly *)
+  let display_plain_notes fmt (_string_nb, string) =
+    plain_array_iteri
+      ~pp_sep:(fun _fret_nb fmt () -> Format.fprintf fmt "-")
+      fmt
+      (fun fmt (_i, v) -> NOTES.print_note fmt v)
+      string false
+
+  let plain fmt arr =
+    plain_matrix_iteri
+      ~pp_sep:(fun _string_nb fmt () -> Format.pp_print_newline fmt ())
+      fmt display_plain_notes arr;
     Format.pp_print_newline fmt ()
 
-  let place_string_number fmt (i, f, s) : unit =
-    Format.fprintf fmt "%d |%a" i f s
+  let plain fretboard =
+    let fmt = Format.std_formatter in
+    plain fmt fretboard
 
-  let display_fret fmt (fret_nb, note) : unit =
-    if fret_nb = 0 then Format.fprintf fmt "|%a" Notes.print_note note
+  let fb = plain
+
+  (* fretted keyboard print iteri functions *)
+  let fret_print_iteri ~pp_sep iteri ppf pp_v arr
+      (range, (need_string_nb : bool)) =
+    iteri
+      (fun i v ->
+        if need_string_nb then Format.fprintf ppf "%d" (i + 1);
+        pp_v ppf (i, v);
+        if i < range - 1 then pp_sep i ppf () )
+      arr
+
+  let fret_array_iteri ~pp_sep fmt ppv arr (string_nb : bool) =
+    let range = Array.length arr in
+    fret_print_iteri ~pp_sep Array.iteri fmt ppv arr (range, string_nb)
+
+  let fret_matrix_iteri ~pp_sep fmt ppv arr =
+    fret_array_iteri ~pp_sep fmt ppv arr true
+
+  (* display frets of the keyboard *)
+  let display_fret fmt (fret_nb, note) =
+    if fret_nb = 0 then Format.fprintf fmt "|%a" NOTES.print_note note
     else
       match Conv.note_to_int note with
       | 1 | 4 | 6 | 9 | 11 ->
-        Format.fprintf fmt {||--%a--||} Notes.print_note note
-      | _n -> Format.fprintf fmt {||---%a--||} Notes.print_note note
+        Format.fprintf fmt {||--%a--||} NOTES.print_note note
+      | _n -> Format.fprintf fmt {||--%a---||} NOTES.print_note note
 
-  let iteri_down_strings fmt (fi : Format.formatter -> 'a -> unit) l : unit =
-    let rec iteri_down_strings i = function
-      | [] -> ()
-      | a :: l ->
-        fi fmt (i, a);
-        iteri_down_strings (i - 1) l
-    in
-    iteri_down_strings (List.length l) l
+  let display_frets fmt (_string_nb, string) =
+    fret_array_iteri
+      ~pp_sep:(fun _fret_nb fmt () -> Format.fprintf fmt "")
+      fmt display_fret string false
 
-  let guitar_string fmt (f, l) : unit = iteri_down_strings fmt f l
+  let print_fret_nb fmt arr =
+    Array.iteri
+      (fun i _v ->
+        if i = 0 then Format.fprintf fmt "  0 "
+        else if i < 10 then Format.fprintf fmt " %2d     " i
+        else Format.fprintf fmt "  %2d    " i )
+      arr;
+    Format.pp_print_newline fmt ()
 
-  let plain_string fmt string_ : unit = guitar_string fmt (display_fret, string_)
+  let plain_frets fmt arr =
+    print_fret_nb fmt arr.(0);
+    fret_matrix_iteri
+      ~pp_sep:(fun _string_nb fmt () -> Format.pp_print_newline fmt ())
+      fmt display_frets arr;
+    Format.pp_print_newline fmt ()
 
-  let print_board fmt (board, f) : unit =
-    let range = List.length @@ List.hd board in
-    List.iteri
-      (fun i corde ->
-        let real_nb = i + 1 in
-        if i = 0 then begin
-          fret_numbering fmt ~range;
-          place_string_number fmt (real_nb, f, corde)
-        end
-        else place_string_number fmt (real_nb, f, corde);
-        Format.fprintf fmt "@\n" )
-      board;
-    dots fmt ~range
+  let frets fretboard : unit =
+    let fmt = Format.std_formatter in
+    plain_frets fmt fretboard
 
-  let plain fmt b : unit = print_board fmt (b, plain_string)
-
-  let fb = print_board
+  let fb_with_frets = frets
 end
 
 module Tones = struct end

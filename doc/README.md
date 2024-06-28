@@ -2,6 +2,8 @@
 
 - [Fretboard math](http://passyworldofmathematics.com/guitar-mathematics/)
 - [More math](https://www.guitarnoise.com/lessons/from-math-to-music/)
+- [More more math](https://www.youtube.com/watch?v=WxAf3NgF4jk)
+- [Fretboard shenanigans, exercises and operationnal rules for generation](https://hubguitar.com/fretboard)
 - [General music theory Memo](https://en.wikibooks.org/wiki/Music_Theory/Scales_and_Intervals)
 - [Big list of Modes and Scales](https://en.wikipedia.org/wiki/List_of_musical_scales_and_modes)
 - [Oolimo, greatest web-app ever made](https://www.oolimo.com/index.php)

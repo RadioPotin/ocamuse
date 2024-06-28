@@ -44,3 +44,5 @@ type diatonic_triad =
   | Diminished
 
 type tuning = note list
+
+type fretboard = note array array

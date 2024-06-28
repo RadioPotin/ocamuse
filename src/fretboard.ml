@@ -1,44 +1,56 @@
-let mapi_down_strings mapi l =
-  let rec iteri_down_strings acc i = function
-    | [] -> acc
-    | a :: l ->
-      let init_s = mapi i a in
-      iteri_down_strings (init_s :: acc) (i - 1) l
+(** [mapi_down_strings mapi strings_l] takes [mapi] a function called on each
+    string's number and open note and a list of open notes. Function returns a
+    fretboard constructed from [mapi]'s subsequent calls.
+
+    [mapi_down_strings] handles the upside-down view of the fretboard as
+    standard way of naming strings. So string number 6 is the lowest one. *)
+let mapi_down_strings (mapi : int -> Types.note -> Types.note array)
+    (strings_l : Types.note list) : Types.note array array =
+  let rec aux_mapi_down_strings strings_mapiacc string_number string_ =
+    match string_ with
+    | [] -> strings_mapiacc
+    | x :: r ->
+      let mapiacc = mapi string_number x in
+      aux_mapi_down_strings (mapiacc :: strings_mapiacc) (string_number - 1) r
   in
-  iteri_down_strings [] (List.length l) l
+  let total_nb_of_strings = List.length strings_l - 1 in
+  let strings = aux_mapi_down_strings [] total_nb_of_strings strings_l in
+  Array.of_list strings
 
-let string_fret_to_notes_tbl = Hashtbl.create 512
+let get_next_fret_note open_string fret =
+  let note_id = Conv.note_to_int open_string + fret in
+  Conv.int_to_note Sharp note_id
 
-let get_note =
-  let open Types in
-  fun string_and_fret_p : note option ->
-    Hashtbl.find_opt string_fret_to_notes_tbl string_and_fret_p
+let coord_to_note_tbl = Hashtbl.create 512
 
-let get_next_fret_note alt open_string fret =
-  let ( *** ) note fret = Conv.note_to_int note + fret in
-  let note_id = open_string *** fret in
-  Conv.int_to_note alt note_id
+let register nb_s range open_note =
+  let note = ref open_note in
+  for i = 0 to range - 1 do
+    Hashtbl.replace coord_to_note_tbl (i, nb_s) !note;
+    note := get_next_fret_note open_note i
+  done
+
+let map nb_s range open_note =
+  Array.init (range - 1) (fun i ->
+      match Hashtbl.find_opt coord_to_note_tbl (i + 1, nb_s) with
+      | None -> open_note
+      | Some note -> note )
+
+let register_and_map_string nb_s range open_note =
+  register nb_s range open_note;
+  map nb_s range open_note
 
 let init_string =
   let open Types in
-  fun (guitar_str_nb : int) (open_note : note) (range : int) : note list ->
-    let rec aux_init_fb acc note fret_nb =
-      if fret_nb = range then begin
-        List.rev acc
-      end
-      else begin
-        Hashtbl.add string_fret_to_notes_tbl (guitar_str_nb, fret_nb) note;
-        aux_init_fb (note :: acc)
-          (get_next_fret_note Sharp open_note (fret_nb + 1))
-          (fret_nb + 1)
-      end
-    in
+  fun (guitar_str_nb : int) (range : int) (open_string : note) : note array ->
+    register_and_map_string guitar_str_nb range open_string
 
-    aux_init_fb [] open_note 0
-
-let init_fretboard =
+let init =
   let open Types in
-  fun ~(tuning : tuning) ?(range : int = 13) () : note list list ->
+  (* range is the number of frets on the board *)
+  (* tuning is a list of notes to start a string from *)
+  fun ~(tuning : tuning) ?(range : int = 13) () : note array array ->
     mapi_down_strings
-      (fun guitar_str_nb note -> init_string guitar_str_nb note range)
+      (fun guitar_str_nb open_string ->
+        init_string guitar_str_nb range open_string )
       tuning

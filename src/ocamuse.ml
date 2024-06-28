@@ -1,7 +1,7 @@
 let name_chord =
   let open Types in
   fun (root : note) (chord_type : chord) : string ->
-    let base_str = Pp.Notes.sprint_note root in
+    let base_str = Pp.NOTES.sprint_note root in
     let suffix_str = Conv.chord_to_string chord_type in
     base_str ^ suffix_str
 
@@ -47,7 +47,7 @@ let get_next_base_note_distance =
   let open Types in
   function C -> 2 | D -> 2 | E -> 1 | F -> 2 | G -> 2 | A -> 2 | B -> 1
 
-(** [get_next_note note] takes a base_note and returns the next one *)
+(** [get_next_base_note note] takes a base_note and returns the next one *)
 let get_next_base_note =
   let open Types in
   function C -> D | D -> E | E -> F | F -> G | G -> A | A -> B | B -> C
@@ -108,16 +108,20 @@ let build_diatonic_triads_sequence mode note =
 
 (*
   TODO:
-    * suite d'accords d'une tonalité donnée [x]
-    * Fretboard print                       [x]
-    * Chord diagrams                        []
-    * Scale degree sequence (progressions)  []
-    * Tabs                                  []
-      * map to fretboard                    []
-      * function to print sequence          []
-      * function to print chords            []
-      * function to print notes             []
-    * Markov Chord progressions             []
-    * generer du midi                       []
-    * generer partoche pdf                  []
+    * suite d'accords d'une tonalité donnée  [x]
+    * Fretboard print                        [x]
+      * build patterns to apply to a board   []
+      * create pattern highlighting function []
+    * Chord diagrams                         []
+    * Scale degree sequence (progressions)   []
+    * Tabs                                   []
+      * map to fretboard                     []
+      * function to print sequence           []
+      * function to print chords             []
+      * function to print notes              []
+    * Add lambda_term support for
+    interactive experience                   []
+    * Markov Chord progressions              []
+    * generer du midi                        []
+    * generer partoche pdf                   []
  *)
