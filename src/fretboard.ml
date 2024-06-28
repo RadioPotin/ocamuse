@@ -1,4 +1,11 @@
-let mapi_down_strings mapi strings_l =
+(** [mapi_down_strings mapi strings_l] takes [mapi] a function called on each
+    string's number and open note and a list of open notes. Function returns a
+    fretboard constructed from [mapi]'s subsequent calls.
+
+    [mapi_down_strings] handles the upside-down view of the fretboard as
+    standard way of naming strings. So string number 6 is the lowest one. *)
+let mapi_down_strings (mapi : int -> Types.note -> Types.note array)
+    (strings_l : Types.note list) : Types.note array array =
   let rec aux_mapi_down_strings strings_mapiacc string_number string_ =
     match string_ with
     | [] -> strings_mapiacc
@@ -35,7 +42,7 @@ let register_and_map_string nb_s range open_note =
 
 let init_string =
   let open Types in
-  fun (guitar_str_nb : int) (range : int) (open_string : note) ->
+  fun (guitar_str_nb : int) (range : int) (open_string : note) : note array ->
     register_and_map_string guitar_str_nb range open_string
 
 let init =

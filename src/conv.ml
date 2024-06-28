@@ -45,13 +45,13 @@ let note_of_string s =
 let mode_of_string =
   let open Types in
   function
-  | "A" -> A_mode
-  | "B" -> B_mode
-  | "C" -> C_mode
-  | "D" -> D_mode
-  | "E" -> E_mode
-  | "F" -> F_mode
-  | "G" -> G_mode
+  | "A" | "a" -> A_mode
+  | "B" | "b" -> B_mode
+  | "C" | "c" -> C_mode
+  | "D" | "d" -> D_mode
+  | "E" | "e" -> E_mode
+  | "F" | "f" -> F_mode
+  | "G" | "g" -> G_mode
   | _ -> invalid_arg "mode_of_string"
 
 let note_to_int =

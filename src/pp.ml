@@ -1,4 +1,6 @@
-module Color = struct
+(** module COLOR is destined to hold all functions and operations on displaying
+    a colourful output using termcaps for now *)
+module COLOR = struct
   let tablet =
     [| "" (* no clour *)
      ; "\027[0m" (* reset *)
@@ -56,7 +58,7 @@ module Color = struct
       Format.pp_print_flush ()
 end
 
-module Notes = struct
+module NOTES = struct
   let print_base_note fmt =
     let open Types in
     function
@@ -124,8 +126,9 @@ module Notes = struct
       chords
 end
 
-module Fretboard = struct
+module FRETBOARD = struct
   (*
+   (** originally used for printing subsequent states of the fretboard. This is unused for now because of lack for proper iteration algorithm *)
   let print_it fretboard =
     let buf = Buffer.create 512 in
     let fmt = Format.formatter_of_buffer buf in
@@ -155,7 +158,7 @@ module Fretboard = struct
     plain_array_iteri
       ~pp_sep:(fun _fret_nb fmt () -> Format.fprintf fmt "-")
       fmt
-      (fun fmt (_i, v) -> Notes.print_note fmt v)
+      (fun fmt (_i, v) -> NOTES.print_note fmt v)
       string false
 
   let plain fmt arr =
@@ -189,12 +192,12 @@ module Fretboard = struct
 
   (* display frets of the keyboard *)
   let display_fret fmt (fret_nb, note) =
-    if fret_nb = 0 then Format.fprintf fmt "|%a" Notes.print_note note
+    if fret_nb = 0 then Format.fprintf fmt "|%a" NOTES.print_note note
     else
       match Conv.note_to_int note with
       | 1 | 4 | 6 | 9 | 11 ->
-        Format.fprintf fmt {||--%a--||} Notes.print_note note
-      | _n -> Format.fprintf fmt {||--%a---||} Notes.print_note note
+        Format.fprintf fmt {||--%a--||} NOTES.print_note note
+      | _n -> Format.fprintf fmt {||--%a---||} NOTES.print_note note
 
   let display_frets fmt (_string_nb, string) =
     fret_array_iteri
