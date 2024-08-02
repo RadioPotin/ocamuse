@@ -273,7 +273,9 @@ module DISPLAY = struct
       | Left -> lgreen
       | Right -> lred
     in
+    (* top row of the display *)
     let offset_for_frets = 1 in
+    (* run allong strings *)
     Array.iteri (fun string_nb guitar_string ->
       let wire = string_nb, guitar_string in
       if string_nb = 0 then
@@ -292,6 +294,19 @@ module DISPLAY = struct
         offset_for_frets
         (eval [B_fg color; S string_line; E_fg])
     ) fretboard
+
+  let pattern _ctx _size _pattern _fb = ()
+
+end
+
+module PATTERNS = struct
+
+  let fretboard _ctx _size pattern _fb =
+    let open Types in
+    match pattern with
+    | C_mode
+    | _ -> failwith "PATTERNS.fretboard"
+
 
 end
 

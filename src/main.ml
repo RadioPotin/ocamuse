@@ -18,32 +18,50 @@ let rec loop ui view =
   LTerm_ui.wait ui >>= function
   | LTerm_event.Key{ code = Up; _ } ->
     (* blue fretboard *)
-    view := Up;
+    view := Plain Up;
     LTerm_ui.draw ui;
     loop ui view
 
   | LTerm_event.Key{ code = Down; _ } ->
     (* red fretboard *)
-    view := Down;
+    view := Plain Down;
     LTerm_ui.draw ui;
     loop ui view
 
   | LTerm_event.Key{ code = Left; _ } ->
     (* green fretboard *)
-    view := Left;
+    view := Plain Left;
     LTerm_ui.draw ui;
     loop ui view
 
   | LTerm_event.Key{ code = Right; _ } ->
     (* green fretboard *)
-    view := Right;
+    view := Plain Right;
     LTerm_ui.draw ui;
     loop ui view
+
+  | LTerm_event.Key{ code = Enter; _ } ->
+    (* green fretboard *)
+    view := Pattern C_mode;
+    LTerm_ui.draw ui;
+    loop_pattern_view ui view
 
   | LTerm_event.Key{ code = Escape; _ } ->
     return ()
   | _ ->
     loop ui view
+
+and loop_pattern_view ui view =
+  LTerm_ui.wait ui >>= function
+  | LTerm_event.Key{ code = Enter; _ } ->
+    (* green fretboard *)
+    view := Pattern C_mode;
+    LTerm_ui.draw ui;
+    loop_pattern_view ui view
+  | LTerm_event.Key{ code = Escape; _ } ->
+    return ()
+  | _ ->
+    loop_pattern_view ui view
 
 let draw lt_matrix m view =
   let size = LTerm_ui.size lt_matrix in
@@ -57,16 +75,17 @@ let draw lt_matrix m view =
       col2 = size.cols;
     }
     ~alignment:H_align_center
-    (Zed_string.of_utf8 "Use arrow keys to change view") LTerm_draw.Light;
-  (* make functions to display fretboard in matrix, add functions to print slightly differently *)
-  Pp.DISPLAY.simple_fretboard_with_frets ctx size view fretboard
+    (Zed_string.of_utf8 " Use arrow keys to change view ") LTerm_draw.Light;
+  match view with
+  | Plain event -> Pp.DISPLAY.simple_fretboard_with_frets ctx size event fretboard
+  | Pattern pattern -> Pp.PATTERNS.fretboard ctx size pattern fretboard
 
 let main () =
   Lazy.force LTerm.stdout
   >>= fun term ->
 
   (* Coordinates of the message. *)
-  let view = ref Up in
+  let view = ref (Plain Up) in
 
   LTerm_ui.create term (fun lt_matrix size -> draw lt_matrix size !view)
   >>= fun ui ->
