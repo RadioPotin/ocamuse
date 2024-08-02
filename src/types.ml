@@ -51,6 +51,7 @@ type color_plain_view_event =
   | Down
   | Left
   | Right
+  | Interline
 
 type view =
   | Plain of color_plain_view_event

@@ -1,20 +1,18 @@
-let fretboard =
-  let default_tuning () : Types.tuning =
-    List.map
-      (fun note -> Types.{ base = note; alteration = 0 })
-      [ E; A; D; G; B; E ]
-  in
-  let tuning = Some (default_tuning ()) in
-  Fretboard.init
-    ~tuning:(Option.value tuning ~default:(default_tuning ()))
-    ~range:13 ()
-
 open Lwt
 open LTerm_geom
 open LTerm_key
 open Types
 
+module MENU = struct
+
+  let menu view =
+    match view with
+    | _ -> {| Use arrow keys to change color - Up Down Left Righ for color change - Enter for Pattern view - Escape to return |}
+
+end
+
 let rec loop ui view =
+  let open Types in
   LTerm_ui.wait ui >>= function
   | LTerm_event.Key{ code = Up; _ } ->
     (* blue fretboard *)
@@ -24,7 +22,7 @@ let rec loop ui view =
 
   | LTerm_event.Key{ code = Down; _ } ->
     (* red fretboard *)
-    view := Plain Down;
+    view := Plain Interline;
     LTerm_ui.draw ui;
     loop ui view
 
@@ -63,6 +61,22 @@ and loop_pattern_view ui view =
   | _ ->
     loop_pattern_view ui view
 
+(* ********************************************** *)
+(* Initialize a default fretboard for development *)
+(* ********************************************** *)
+let fretboard =
+  let default_tuning () : Types.tuning =
+    List.map
+      (fun note -> Types.{ base = note; alteration = 0 })
+      [ E; A; D; G; B; E ]
+  in
+  let tuning = Some (default_tuning ()) in
+  Fretboard.init
+    ~tuning:(Option.value tuning ~default:(default_tuning ()))
+    ~range:13 ()
+(* ********************************************** *)
+(* ********************************************** *)
+
 let draw lt_matrix m view =
   let size = LTerm_ui.size lt_matrix in
   let ctx = LTerm_draw.context m size in
@@ -75,10 +89,11 @@ let draw lt_matrix m view =
       col2 = size.cols;
     }
     ~alignment:H_align_center
-    (Zed_string.of_utf8 " Use arrow keys to change view ") LTerm_draw.Light;
+    (Zed_string.of_utf8 (MENU.menu view))
+    LTerm_draw.Light;
   match view with
-  | Plain event -> Pp.DISPLAY.simple_fretboard_with_frets ctx size event fretboard
-  | Pattern pattern -> Pp.PATTERNS.fretboard ctx size pattern fretboard
+  | Plain event -> Pp.DISPLAY.FMT.simple_fretboard_with_frets ctx size event fretboard
+  | Pattern pattern -> Pp.DISPLAY.PATTERNS.fretboard ctx size pattern fretboard
 
 let main () =
   Lazy.force LTerm.stdout
