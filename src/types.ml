@@ -45,4 +45,11 @@ type diatonic_triad =
 
 type tuning = note list
 
+(* temporary display mode for lambda term itf *)
+type view =
+  | Up
+  | Down
+  | Left
+  | Right
+
 type fretboard = note array array

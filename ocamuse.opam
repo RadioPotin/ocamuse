@@ -12,6 +12,8 @@ bug-reports: "TODO/ocamuse"
 depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "4.08"}
+  "zed" {>= "3.2.3"}
+  "lwt" {>= "5.7.0"}
   "odoc" {with-doc}
 ]
 build: [

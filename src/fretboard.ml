@@ -5,7 +5,7 @@
     [mapi_down_strings] handles the upside-down view of the fretboard as
     standard way of naming strings. So string number 6 is the lowest one. *)
 let mapi_down_strings (mapi : int -> Types.note -> Types.note array)
-    (strings_l : Types.note list) : Types.note array array =
+  (strings_l : Types.note list) : Types.note array array =
   let rec aux_mapi_down_strings strings_mapiacc string_number string_ =
     match string_ with
     | [] -> strings_mapiacc
@@ -32,9 +32,9 @@ let register nb_s range open_note =
 
 let map nb_s range open_note =
   Array.init (range - 1) (fun i ->
-      match Hashtbl.find_opt coord_to_note_tbl (i + 1, nb_s) with
-      | None -> open_note
-      | Some note -> note )
+    match Hashtbl.find_opt coord_to_note_tbl (i + 1, nb_s) with
+    | None -> open_note
+    | Some note -> note )
 
 let register_and_map_string nb_s range open_note =
   register nb_s range open_note;
@@ -52,5 +52,5 @@ let init =
   fun ~(tuning : tuning) ?(range : int = 13) () : note array array ->
     mapi_down_strings
       (fun guitar_str_nb open_string ->
-        init_string guitar_str_nb range open_string )
+          init_string guitar_str_nb range open_string )
       tuning

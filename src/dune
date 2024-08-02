@@ -1,6 +1,6 @@
 (executable
  (name main)
- (libraries lambda-term)
+ (libraries lambda-term lwt lwt.unix zed)
  (modules ocamuse types conv fretboard pp main))
 
 (env

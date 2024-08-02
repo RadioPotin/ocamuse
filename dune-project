@@ -24,10 +24,13 @@
 (package
  (name ocamuse)
  (synopsis "OCaml library/executable to TODO")
- (description
-  "ocamuse is an OCaml library/executable to TODO.")
+ (description "ocamuse is an OCaml library/executable to TODO.")
  (tags
   (ocamuse TODO TODO TODO TODO))
  (depends
   (ocaml
-   (>= 4.08))))
+   (>= 4.08))
+  (zed
+   (>= 3.2.3))
+  (lwt
+   (>= 5.7.0))))
