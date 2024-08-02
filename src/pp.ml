@@ -127,6 +127,7 @@ module NOTES = struct
 end
 
 module FRETBOARD = struct
+
   (* ************************************** *)
   (** plain fretboard print iteri functions *)
   (* ************************************** *)
@@ -227,8 +228,22 @@ module FRETBOARD = struct
   let frets_stdout fretboard : unit =
     let fmt = Format.std_formatter in
     plain_frets fmt fretboard
-    (* ************************************** *)
-    (* ************************************** *)
+  (* ************************************** *)
+  (* ************************************** *)
+
+  (* ************************************** *)
+  (*   General Purpose e.g. fmt conversion  *)
+  (* ************************************** *)
+  let stringify f arg =
+    Format.asprintf "%a" f arg
+
+  let stringify_frets_numbers guitar_string =
+    stringify print_line_of_frets_numbers guitar_string
+
+  let stringify_frets guitar_string = stringify display_frets guitar_string
+  (* ************************************** *)
+  (* ************************************** *)
+
 
 end
 
@@ -236,10 +251,9 @@ module DISPLAY = struct
 
   open LTerm_text
   open LTerm_geom
-  open LTerm_key
   open LTerm_draw
 
-  let fretboard_with_frets ctx size view fretboard =
+  let simple_fretboard_with_frets ctx size view fretboard =
     let offset_of_sub_context = 2 in
     let ctx =
       LTerm_draw.sub ctx
@@ -259,24 +273,25 @@ module DISPLAY = struct
       | Left -> lgreen
       | Right -> lred
     in
-    let fill_matrix_with_fretboard () =
-      let offset_for_frets = 1 in
-      let fmt = Format.str_formatter in
-      Array.iteri (fun string_nb guitar_string ->
-        if string_nb = 0 then
-          begin
-            FRETBOARD.print_line_of_frets_numbers fmt fretboard.(0);
-            let fret_line = Format.flush_str_formatter () in
-            draw_styled ctx 0 0
-              (eval [B_fg color ; S fret_line; E_fg]);
-          end;
-        FRETBOARD.display_frets fmt (string_nb, guitar_string);
-        let string_line =  Format.flush_str_formatter () in
-        draw_styled ctx (string_nb + offset_for_frets) offset_for_frets
-          (eval [B_fg color; S string_line; E_fg])
-      ) fretboard
-      (*  LTerm_draw.draw_styled ctx 0 0 (eval [B_fg LTerm_style.lblue; S s; E_fg]) *)
-    in fill_matrix_with_fretboard ()
+    let offset_for_frets = 1 in
+    Array.iteri (fun string_nb guitar_string ->
+      let wire = string_nb, guitar_string in
+      if string_nb = 0 then
+        begin
+          let fret_line =
+            FRETBOARD.stringify_frets_numbers guitar_string
+          in
+          draw_styled ctx
+            0
+            0
+            (eval [B_fg color ; S fret_line; E_fg]);
+        end;
+      let string_line = FRETBOARD.stringify_frets wire in
+      draw_styled ctx
+        (string_nb + offset_for_frets)
+        offset_for_frets
+        (eval [B_fg color; S string_line; E_fg])
+    ) fretboard
 
 end
 
