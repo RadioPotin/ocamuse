@@ -57,4 +57,16 @@ type view =
   | Plain of color_plain_view_event
   | Pattern of mode
 
+type struc =
+  {
+    string: int ref;
+    offset : int ref;
+    cursor_i : int ref;
+    number_of_strings: int;
+    ctx : LTerm_draw.context;
+    color : LTerm_style.color;
+    guitar_string : (note array) ref;
+    fretboard : (note array) array;
+  }
+
 type fretboard = ( int * note array ) array

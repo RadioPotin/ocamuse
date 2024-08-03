@@ -92,8 +92,8 @@ let draw lt_matrix m view =
     (Zed_string.of_utf8 (MENU.menu view))
     LTerm_draw.Light;
   match view with
-  | Plain event -> Pp.DISPLAY.FMT.simple_fretboard_with_frets ctx size event fretboard
-  | Pattern pattern -> Pp.DISPLAY.PATTERNS.fretboard ctx size pattern fretboard
+  | Plain event -> Pp.DISPLAY.MATRIX.PLAIN.fretboard_with_frets ctx size event fretboard
+  | Pattern pattern -> Pp.DISPLAY.MATRIX.PATTERNS.fretboard ctx size pattern fretboard
 
 let main () =
   Lazy.force LTerm.stdout

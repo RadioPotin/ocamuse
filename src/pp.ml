@@ -77,25 +77,26 @@ end
 
 module FRETBOARD = struct
 
+  (* ************************************** *)
+  (** plain fretboard print iteri functions *)
+  (* ************************************** *)
+
+  let fret_print_iteri ~pp_sep ppf pp_v arr range =
+    Array.iteri
+      (fun i v ->
+          pp_v ppf (i, v);
+          if i < range - 1 then pp_sep i ppf ()
+      )
+      arr
+
+  let iterate_over_string ~pp_sep fmt ppv arr =
+    let range = Array.length arr in
+    fret_print_iteri ~pp_sep fmt ppv arr range
+
+  let fret_matrix_iteri ~pp_sep fmt ppv arr =
+    iterate_over_string ~pp_sep fmt ppv arr
+
   module FMT = struct
-    (* ************************************** *)
-    (** plain fretboard print iteri functions *)
-    (* ************************************** *)
-
-    let fret_print_iteri ~pp_sep ppf pp_v arr range =
-      Array.iteri
-        (fun i v ->
-            pp_v ppf (i, v);
-            if i < range - 1 then pp_sep i ppf ()
-        )
-        arr
-
-    let iterate_over_string ~pp_sep fmt ppv arr =
-      let range = Array.length arr in
-      fret_print_iteri ~pp_sep fmt ppv arr range
-
-    let fret_matrix_iteri ~pp_sep fmt ppv arr =
-      iterate_over_string ~pp_sep fmt ppv arr
 
     (* ************************************** *)
     (*   General Purpose e.g. fmt conversion  *)
@@ -146,9 +147,12 @@ module FRETBOARD = struct
     (* ************************************** *)
 
     let display_box fmt (fret_nb, _note) =
-      if fret_nb = 0 then
+      if fret_nb = 0 then begin
         Format.fprintf fmt "||";
-      Format.fprintf fmt "|------|"
+      end;
+      if fret_nb < 11 then
+        Format.fprintf fmt "|------|"
+      else ()
 
     let display_line fmt (_string_nb, string) =
       iterate_over_string
@@ -164,162 +168,176 @@ module FRETBOARD = struct
 
   end
 
+  module DEBUG = struct
+
+    (*
+    open Types
+
+    let print_struc fmt {cursor_i; offset; number_of_strings; guitar_string; _;} =
+      Format.fprintf fmt
+        {| |} struc
+    *)
+
+  end
+
 end
 
 module DISPLAY = struct
 
-  module FMT = struct
+  module MATRIX = struct
     open LTerm_text
     open LTerm_geom
-
-    type struc =
-      {
-        string: int ref;
-        offset : int ref;
-        cursor_i : int ref;
-        number_of_strings: int;
-        ctx : LTerm_draw.context;
-        color : LTerm_style.color;
-        guitar_string : Types.note array;
-      }
+    open Types
 
     let write_interline struc =
       let open LTerm_draw in
+      let guitar_string = struc.guitar_string in
       let string_line =
-        FRETBOARD.FMT.stringify_interline (0, struc.guitar_string)
+        FRETBOARD.FMT.stringify_interline (struc.string, !guitar_string)
       in
-      let cursor_i = struc.cursor_i in
-      let offset = struc.offset in
       draw_styled struc.ctx
-        (!cursor_i + !offset)
-        0
+        !(struc.cursor_i)
+        !(struc.offset)
         (eval [B_fg struc.color; S string_line; E_fg])
 
     let write_frets struc =
       let open LTerm_draw in
+      let guitar_string = struc.guitar_string in
       let string_line =
-        FRETBOARD.FMT.stringify_frets (0, struc.guitar_string)
+        FRETBOARD.FMT.stringify_frets (struc.string, !guitar_string)
       in
-      let cursor_i = struc.cursor_i in
-      let offset = struc.offset in
       draw_styled struc.ctx
-        (!cursor_i + !offset)
-        !offset
+        !(struc.cursor_i)
+        !(struc.offset)
         (eval [B_fg struc.color; S string_line; E_fg])
 
     let write_fret_numbers struc =
+      let guitar_string = struc.guitar_string in
       let open LTerm_draw in
       let fret_line =
-        FRETBOARD.FMT.stringify_frets_numbers (struc.string, struc.guitar_string)
+        FRETBOARD.FMT.stringify_frets_numbers
+          (struc.string, !guitar_string)
       in
-      let cursor_i = struc.cursor_i in
       draw_styled struc.ctx
-        !cursor_i
-        0
+        !(struc.cursor_i)
+        !(struc.offset)
         (eval [B_fg struc.color ; S fret_line; E_fg])
 
-    let write_first_row struc =
-      write_fret_numbers struc
-
     let write_rows struc =
-      write_first_row struc;
+      let update_field field i = field := i in
+      let move_cursor struc =
+        update_field struc.cursor_i (!(struc.cursor_i) + 1)
+      in
+      (* top fret numbers *)
+      write_fret_numbers struc;
+      move_cursor struc;
+      (* interline *)
+      write_interline struc;
+      move_cursor struc;
+      (* iterate over rest of strings *)
+      write_frets struc;
+      move_cursor struc;
+      write_interline struc;
+      move_cursor struc;
       let i = ref 1 in
       while !i < struc.number_of_strings do
+        update_field struc.guitar_string struc.fretboard.(!i);
+        (* frets and notes *)
+        write_frets struc;
+        move_cursor struc;
+        update_field struc.string !i;
+        (* interline *)
+        write_interline struc;
+        move_cursor struc;
 
         incr i
       done
-      (*
-      while !string_number < struc.number_of_strings do
-        if !string_number = 0 then
-          write_first_row struc;
 
-        string_number := !string_number + 1
-done
-        *)
+    module PLAIN = struct
 
-    let interline_display ctx color fretboard =
-      (* top row of the display *)
-      let offset_for_frets_numbers = 1 in
-      let offset = offset_for_frets_numbers + 1 in
-      (* run along strings *)
-      let number_of_strings = Array.length fretboard in
-      let cursor_i = ref 0 in
-      let offset = ref offset in
-      let struc =
-        {
-          ctx;
-          color;
-          offset;
-          cursor_i;
-          string = ref 0;
-          number_of_strings;
-          guitar_string = fretboard.(0);
-        }
-      in
-      write_rows struc
+      let fretboard_with_frets ctx size view fretboard =
 
-    let no_interline_display ctx color fretboard =
-      Array.iteri (fun string_nb string ->
-        let offset_for_frets_numbers = 4 in
-        if string_nb = 0 then
-          begin
-            let fret_line =
-              FRETBOARD.FMT.stringify_frets_numbers (string_nb, string)
+        (* plain fretted displayVy *)
+        let no_interline_display ctx color fretboard =
+          Array.iteri (fun string_nb string ->
+            let offset = 4 in
+            if string_nb = 0 then
+              begin
+                let fret_line =
+                  FRETBOARD.FMT.stringify_frets_numbers (string_nb, string)
+                in
+                LTerm_draw.draw_styled ctx
+                  (offset - 1)
+                  offset
+                  (eval [B_fg color ; S fret_line; E_fg])
+              end;
+            let string_line =
+              FRETBOARD.FMT.stringify_frets (string_nb, string)
             in
             LTerm_draw.draw_styled ctx
-              (offset_for_frets_numbers - 1)
-              offset_for_frets_numbers
-              (eval [B_fg color ; S fret_line; E_fg])
-          end;
-        let string_line =
-          FRETBOARD.FMT.stringify_frets (string_nb, string)
+              (string_nb + offset)
+              offset
+              (eval [B_fg color; S string_line; E_fg]);
+          ) fretboard
         in
-        LTerm_draw.draw_styled ctx
-          (string_nb + offset_for_frets_numbers)
-          offset_for_frets_numbers
-          (eval [B_fg color; S string_line; E_fg]);
-      ) fretboard
 
-    let simple_fretboard_with_frets ctx size view fretboard =
-      let offset_of_sub_context = 1 in
-      let position =
-        {
-          row1 = offset_of_sub_context;
-          col1 = offset_of_sub_context;
-          row2 = size.rows - 1;
-          col2 = size.cols - 1;
-        }
-      in
-      let ctx = LTerm_draw.sub ctx position in
-      let color, display_mode =
+        (* interlined fretted display *)
+        let interline_display ctx color fretboard =
+          (* top row of the display *)
+          let offset_for_frets_numbers = 4 in
+          (* run along strings *)
+          let number_of_strings = Array.length fretboard in
+          let cursor_i = ref 0 in
+          let offset = ref offset_for_frets_numbers in
+          let struc =
+            {
+              ctx;
+              color;
+              offset;
+              cursor_i;
+              fretboard;
+              string = ref 0;
+              number_of_strings;
+              guitar_string = ref fretboard.(0);
+            }
+          in
+          write_rows struc
+
+        in
+        let offset_of_sub_context = 15 in
+        let position =
+          {
+            row1 = offset_of_sub_context;
+            col1 = offset_of_sub_context;
+            row2 = size.rows - 1;
+            col2 = size.cols - 1;
+          }
+        in
+        let ctx = LTerm_draw.sub ctx position in
+        let color, display_mode =
+          let open Types in
+          let open LTerm_style in
+          match view with
+          | Up -> default, no_interline_display
+          | Down -> lblue, interline_display
+          | Left -> lgreen, no_interline_display
+          | Right -> lred, no_interline_display
+          | Interline -> lred, interline_display
+        in
+        display_mode ctx color fretboard
+    end
+
+    module PATTERNS = struct
+
+      let pattern _ctx _size _pattern _fb = ()
+
+      let fretboard _ctx _size pattern _fb =
         let open Types in
-        let open LTerm_style in
-        match view with
-        | Up -> default, no_interline_display
-        | Down -> lblue, interline_display
-        | Left -> lgreen,no_interline_display
-        | Right -> lred, no_interline_display
-        | Interline -> lred, interline_display
-      in
-      display_mode ctx color fretboard
+        match pattern with
+        | C_mode | _ -> failwith "PATTERNS.fretboard"
+
+    end
   end
-
-  module MATRIX = struct
-
-
-  end
-
-  module PATTERNS = struct
-
-    let pattern _ctx _size _pattern _fb = ()
-
-    let fretboard _ctx _size pattern _fb =
-      let open Types in
-      match pattern with
-      | C_mode | _ -> failwith "PATTERNS.fretboard"
-
-  end
-
 end
 
 
