@@ -57,4 +57,4 @@ type view =
   | Plain of color_plain_view_event
   | Pattern of mode
 
-type fretboard = note array array
+type fretboard = ( int * note array ) array

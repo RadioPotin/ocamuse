@@ -64,7 +64,7 @@ and loop_pattern_view ui view =
 (* ********************************************** *)
 (* Initialize a default fretboard for development *)
 (* ********************************************** *)
-let fretboard =
+let fretboard  =
   let default_tuning () : Types.tuning =
     List.map
       (fun note -> Types.{ base = note; alteration = 0 })
