@@ -85,8 +85,6 @@ module FRETBOARD = struct
     let fret_print_iteri ~pp_sep ppf pp_v arr range =
       Array.iteri
         (fun i v ->
-            if i = 0 then
-              Format.fprintf ppf "%d" (i + 1);
             pp_v ppf (i, v);
             if i < range - 1 then pp_sep i ppf ()
         )
@@ -110,9 +108,9 @@ module FRETBOARD = struct
     (* ************************************** *)
 
     let print_top_numbers fmt (fret_nb, _note) =
-      if fret_nb = 0 then Format.fprintf fmt "||-"
-      else
-        Format.fprintf fmt {||------||}
+      if fret_nb = 0 then Format.fprintf fmt " 0 "
+      else if fret_nb < 10 then Format.fprintf fmt " %2d     " fret_nb
+      else Format.fprintf fmt "  %2d    " fret_nb
 
     let print_line_of_frets_numbers fmt (_string_nb, string) =
       iterate_over_string
@@ -149,7 +147,7 @@ module FRETBOARD = struct
 
     let display_box fmt (fret_nb, _note) =
       if fret_nb = 0 then
-        Format.fprintf fmt "||-";
+        Format.fprintf fmt "||";
       Format.fprintf fmt "|------|"
 
     let display_line fmt (_string_nb, string) =
@@ -261,17 +259,17 @@ done
       write_rows struc
 
     let no_interline_display ctx color fretboard =
-      let offset_for_frets_numbers = 1 in
       Array.iteri (fun string_nb string ->
+        let offset_for_frets_numbers = 4 in
         if string_nb = 0 then
           begin
             let fret_line =
               FRETBOARD.FMT.stringify_frets_numbers (string_nb, string)
             in
             LTerm_draw.draw_styled ctx
-              0
-              0
-              (eval [B_fg color ; S fret_line; E_fg]);
+              (offset_for_frets_numbers - 1)
+              offset_for_frets_numbers
+              (eval [B_fg color ; S fret_line; E_fg])
           end;
         let string_line =
           FRETBOARD.FMT.stringify_frets (string_nb, string)
@@ -279,7 +277,7 @@ done
         LTerm_draw.draw_styled ctx
           (string_nb + offset_for_frets_numbers)
           offset_for_frets_numbers
-          (eval [B_fg color; S string_line; E_fg])
+          (eval [B_fg color; S string_line; E_fg]);
       ) fretboard
 
     let simple_fretboard_with_frets ctx size view fretboard =
