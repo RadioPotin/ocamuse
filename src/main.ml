@@ -16,25 +16,25 @@ let rec loop ui view =
   LTerm_ui.wait ui >>= function
   | LTerm_event.Key{ code = Up; _ } ->
     (* blue fretboard *)
-    view := Plain Up;
+    view := Fretted Up;
     LTerm_ui.draw ui;
     loop ui view
 
   | LTerm_event.Key{ code = Down; _ } ->
     (* red fretboard *)
-    view := Plain Down;
+    view := Fretted Down;
     LTerm_ui.draw ui;
     loop ui view
 
   | LTerm_event.Key{ code = Left; _ } ->
     (* green fretboard *)
-    view := Fretted Left;
+    view := Plain Left;
     LTerm_ui.draw ui;
     loop ui view
 
   | LTerm_event.Key{ code = Right; _ } ->
     (* green fretboard *)
-    view := Fretted Right;
+    view := Interline Right;
     LTerm_ui.draw ui;
     loop ui view
 
@@ -76,6 +76,49 @@ let fretboard  =
     ~range:13 ()
 (* ********************************************** *)
 (* ********************************************** *)
+let select_display_mode event size ctx fretboard =
+  let color = Display.COLOR.event_to_color_full_view event in
+  let sub_ctx =
+    let offset_of_sub_context = 15 in
+    let position =
+      {
+        row1 = offset_of_sub_context;
+        col1 = offset_of_sub_context;
+        row2 = size.rows - 1;
+        col2 = size.cols - 1;
+      }
+    in
+    LTerm_draw.sub ctx position
+  in
+  match event with
+  | Types.Fretted _ ->
+    Display.DRAW.MATRIX.write_rows_with_no_interline sub_ctx fretboard color
+  | Types.Interline _ ->
+    Display.DRAW.MATRIX.write_rows_with_interlines sub_ctx fretboard color
+  | Types.Plain _ ->
+    let open LTerm_geom in
+    let offset_of_sub_context = 18 in
+    let position =
+      {
+        row1 = offset_of_sub_context + 1;
+        col1 = offset_of_sub_context * 2 + 4;
+        row2 = size.rows - 1;
+        col2 = size.cols - 1;
+      }
+    in
+    let ctx = LTerm_draw.sub ctx position in
+    Display.DRAW.MATRIX.write_plain_rows ctx fretboard color
+  | Pattern _ ->
+    Display.DRAW.MATRIX.write_rows_with_interlines sub_ctx fretboard color
+
+let view_fretboard ctx event fretboard size =
+  let display_mode =
+    select_display_mode event size
+  in
+  display_mode ctx fretboard
+
+(* ********************************************** *)
+(* ********************************************** *)
 
 let draw lt_matrix m view =
   let size = LTerm_ui.size lt_matrix in
@@ -91,8 +134,7 @@ let draw lt_matrix m view =
     ~alignment:H_align_center
     (Zed_string.of_utf8 (MENU.menu view))
     LTerm_draw.Light;
-  match view with
-  | view -> Pp.DISPLAY.DRAW.fretboard_with_frets ctx view fretboard
+  view_fretboard ctx view fretboard size
 
 let main () =
   Lazy.force LTerm.stdout

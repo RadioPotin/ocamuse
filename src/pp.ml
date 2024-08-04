@@ -153,19 +153,20 @@ module FRETBOARD = struct
           in
           let should_space = scan_column (fret_nb, string_number) in
           if should_space then
-            match Conv.note_to_int note with
-            | 1 | 4 | 6 | 9 | 11 ->
-              if should_space then
-                Format.fprintf fmt {|%a-|} NOTES.FMT.print_note note
-              else
-                Format.fprintf fmt {|%a-|} NOTES.FMT.print_note note
-            | _ ->
-              if should_space then
-                Format.fprintf fmt {|%a--|} NOTES.FMT.print_note note
-              else
-                Format.fprintf fmt {|%a|} NOTES.FMT.print_note note
-          else
-            Format.fprintf fmt {|%a|} NOTES.FMT.print_note note
+            if fret_nb < 11 then
+              match Conv.note_to_int note with
+              | 1 | 4 | 6 | 9 | 11 ->
+                if should_space then
+                  Format.fprintf fmt {|%a-|} NOTES.FMT.print_note note
+                else
+                  Format.fprintf fmt {|%a-|} NOTES.FMT.print_note note
+              | _ ->
+                if should_space then
+                  Format.fprintf fmt {|%a--|} NOTES.FMT.print_note note
+                else
+                  Format.fprintf fmt {|%a|} NOTES.FMT.print_note note
+            else
+              Format.fprintf fmt {|%a|} NOTES.FMT.print_note note
 
     let print_plain_frets fmt (string_nb, string) =
       iterate_over_string
@@ -202,8 +203,8 @@ module FRETBOARD = struct
       else
         match Conv.note_to_int note with
         | 1 | 4 | 6 | 9 | 11 ->
-          Format.fprintf fmt {||--%a--||} NOTES.FMT.print_note note
-        | _n -> Format.fprintf fmt {||--%a---||} NOTES.FMT.print_note note
+          Format.fprintf fmt {||- %a -||} NOTES.FMT.print_note note
+        | _n -> Format.fprintf fmt {||- %a  -||} NOTES.FMT.print_note note
 
     let display_frets fmt (_string_nb, string) =
       iterate_over_string
@@ -219,10 +220,10 @@ module FRETBOARD = struct
 
     let display_box fmt (fret_nb, _note) =
       if fret_nb = 0 then begin
-        Format.fprintf fmt "||";
+        Format.fprintf fmt "| ";
       end;
       if fret_nb < 11 then
-        Format.fprintf fmt "|------|"
+        Format.fprintf fmt "|      |"
       else ()
 
     let display_line fmt (_string_nb, string) =
@@ -241,31 +242,27 @@ module FRETBOARD = struct
 
 end
 
-module DISPLAY = struct
+(** module COLOR is destined to hold all functions and operations on displaying
+    a colourful output *)
+module COLOR : sig
+  val event_to_color_full_view : (Types.view -> LTerm_style.color)
+end
+= struct
+  let event_to_color =
+    let open LTerm_style in
+    let open Types in
+    function
+    | Up -> lblue
+    | Left -> lred
+    | Right -> lgreen
+    | Down -> lcyan
 
-  (** module COLOR is destined to hold all functions and operations on displaying
-      a colourful output *)
-  module COLOR : sig
-    val event_to_color_full_view : (Types.view -> LTerm_style.color)
-  end
-  = struct
-    let event_to_color =
-      let open LTerm_style in
-      let open Types in
-      function
-      | Up -> lblue
-      | Left -> lred
-      | Right -> lgreen
-      | Down -> lcyan
-
-    let event_to_color_full_view =
-      let open LTerm_style in
-      let open Types in
-      function
-      | Fretted event -> event_to_color event
-      | Plain event -> event_to_color event
-      | Interline event -> event_to_color event
-      | _ -> assert false
-  end
+  let event_to_color_full_view =
+    let open Types in
+    function
+    | Fretted event -> event_to_color event
+    | Plain event -> event_to_color event
+    | Interline event -> event_to_color event
+    | _ -> assert false
 
 end

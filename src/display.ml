@@ -14,7 +14,6 @@ end
     | Down -> lcyan
 
   let event_to_color_full_view =
-    let open LTerm_style in
     let open Types in
     function
     | Fretted event -> event_to_color event
@@ -161,36 +160,6 @@ module DRAW = struct
           (eval [B_fg struc.color; S string_line; E_fg]);
       ) struc.fretboard
   end
-
-  let select_display_mode event ctx fretboard color =
-    match event with
-    | Types.Fretted _ ->
-      MATRIX.write_rows_with_no_interline ctx fretboard color
-    | Types.Interline _ ->
-      MATRIX.write_rows_with_interlines ctx fretboard color
-    | Types.Plain _ ->
-      MATRIX.write_plain_rows ctx fretboard color
-    | Pattern _ ->
-      MATRIX.write_rows_with_interlines ctx fretboard color
-
-  let fretboard_with_frets ctx view fretboard =
-      (*
-      let offset_of_sub_context = 15 in
-      let position =
-        {
-          row1 = offset_of_sub_context;
-          col1 = offset_of_sub_context;
-          row2 = size.rows - 1;
-          col2 = size.cols - 1;
-        }
-      in
-      let ctx = LTerm_draw.sub ctx position in
-    *)
-    let color = COLOR.event_to_color_full_view view in
-    let display_mode =
-      select_display_mode view
-    in
-    display_mode ctx fretboard color
 
   module PATTERNS = struct
 
