@@ -25,9 +25,9 @@ let coord_to_note_tbl = Hashtbl.create 512
 
 let register nb_s range open_note =
   let note = ref open_note in
-  for i = 0 to range - 1 do
-    Hashtbl.replace coord_to_note_tbl (i, nb_s) !note;
-    note := get_next_fret_note open_note i
+  for fret_number = 0 to range - 1 do
+    Hashtbl.replace coord_to_note_tbl (fret_number, nb_s) !note;
+    note := get_next_fret_note open_note fret_number
   done
 
 let map nb_s range open_note =

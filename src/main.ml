@@ -22,19 +22,19 @@ let rec loop ui view =
 
   | LTerm_event.Key{ code = Down; _ } ->
     (* red fretboard *)
-    view := Plain Interline;
+    view := Plain Down;
     LTerm_ui.draw ui;
     loop ui view
 
   | LTerm_event.Key{ code = Left; _ } ->
     (* green fretboard *)
-    view := Plain Left;
+    view := Fretted Left;
     LTerm_ui.draw ui;
     loop ui view
 
   | LTerm_event.Key{ code = Right; _ } ->
     (* green fretboard *)
-    view := Plain Right;
+    view := Fretted Right;
     LTerm_ui.draw ui;
     loop ui view
 
@@ -92,16 +92,13 @@ let draw lt_matrix m view =
     (Zed_string.of_utf8 (MENU.menu view))
     LTerm_draw.Light;
   match view with
-  | Plain event -> Pp.DISPLAY.MATRIX.PLAIN.fretboard_with_frets ctx size event fretboard
-  | Pattern pattern -> Pp.DISPLAY.MATRIX.PATTERNS.fretboard ctx size pattern fretboard
+  | view -> Pp.DISPLAY.DRAW.fretboard_with_frets ctx view fretboard
 
 let main () =
   Lazy.force LTerm.stdout
   >>= fun term ->
-
   (* Coordinates of the message. *)
   let view = ref (Plain Up) in
-
   LTerm_ui.create term (fun lt_matrix size -> draw lt_matrix size !view)
   >>= fun ui ->
   Lwt.finalize (fun () -> loop ui view) (fun () -> LTerm_ui.quit ui)
