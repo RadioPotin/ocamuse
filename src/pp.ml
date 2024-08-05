@@ -136,7 +136,7 @@ module FRETBOARD = struct
             flag :=
               match Hashtbl.find_opt coord_to_note_tbl key with
               | None -> false
-              | Some note -> note.alteration <> 0
+              | Some note -> note.alteration <> 0 || !flag
 
           in
 
@@ -239,30 +239,5 @@ module FRETBOARD = struct
     (* ************************************** *)
 
   end
-
-end
-
-(** module COLOR is destined to hold all functions and operations on displaying
-    a colourful output *)
-module COLOR : sig
-  val event_to_color_full_view : (Types.view -> LTerm_style.color)
-end
-= struct
-  let event_to_color =
-    let open LTerm_style in
-    let open Types in
-    function
-    | Up -> lblue
-    | Left -> lred
-    | Right -> lgreen
-    | Down -> lcyan
-
-  let event_to_color_full_view =
-    let open Types in
-    function
-    | Fretted event -> event_to_color event
-    | Plain event -> event_to_color event
-    | Interline event -> event_to_color event
-    | _ -> assert false
 
 end

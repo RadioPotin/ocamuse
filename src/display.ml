@@ -1,30 +1,41 @@
 (** module COLOR is destined to hold all functions and operations on displaying
       a colourful output *)
 module COLOR : sig
-  val event_to_color_full_view : (Types.view -> LTerm_style.color)
+  val event_to_color_flat_view : Types.view -> LTerm_style.color
 end
 = struct
   let event_to_color =
     let open LTerm_style in
     let open Types in
     function
-    | Up -> lblue
-    | Left -> lred
-    | Right -> lgreen
-    | Down -> lcyan
+    | Black -> black
+    | Red -> red
+    | Green -> green
+    | Yellow -> yellow
+    | Blue -> blue
+    | Magenta -> magenta
+    | Cyan -> cyan
+    | White -> white
+    | Lblack -> lblack
+    | Lred -> lred
+    | Lgreen -> lgreen
+    | Lyellow -> lyellow
+    | Lblue -> lblue
+    | Lmagenta -> lmagenta
+    | Lcyan -> lcyan
+    | Lwhite -> lwhite
 
-  let event_to_color_full_view =
+  let event_to_color_flat_view =
     let open Types in
     function
     | Fretted event -> event_to_color event
     | Plain event -> event_to_color event
     | Interline event -> event_to_color event
-    | _ -> assert false
 end
 
-module DRAW = struct
 
-  module MATRIX = struct
+module MATRIX = struct
+  module DRAW = struct
     open Types
     open LTerm_text
 
@@ -161,7 +172,33 @@ module DRAW = struct
       ) struc.fretboard
   end
 
+  module CELL = struct
+
+    (* This module will hold all functions that aim to write a PP fret directly to the keyboard according to view *)
+
+     (*
++      For now, the deal is to implement displays similar to the ones provided
++      by the Plain, Fretted and Interline view modes.
++
++      Instead of [LTerm_draw.draw_styled], we would use the [LTerm_draw.draw_char] to achieve that.
++
++      One way to go would be to print each fretboard view once and save
++      the context-world coordinates of each important note to a Hashtbl with
++      their relative role (Root, Tonic, Major 3rd, etc) for the given type of
++      Pattern then mapping a given role, in the context to a specific color to
++      go style directly in the context.
++
++      We could then later aim at making the color selection customisable that way
++    *)
+
+  end
+
+
   module PATTERNS = struct
+
+    (* This module will hold all functions that aim to build and highlight a
+          +       given pattern on the fretboard *)
+
 
     let pattern _ctx _size _pattern _fb = ()
 

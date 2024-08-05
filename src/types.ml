@@ -47,15 +47,30 @@ type tuning = note list
 
 (* temporary display mode for lambda term itf *)
 type color_plain_view_event =
-  | Up
-  | Down
-  | Left
-  | Right
+  | Black
+  | Red
+  | Green
+  | Yellow
+  | Blue
+  | Magenta
+  | Cyan
+  | White
+  | Lblack
+  | Lred
+  | Lgreen
+  | Lyellow
+  | Lblue
+  | Lmagenta
+  | Lcyan
+  | Lwhite
 
 type view =
   | Plain of color_plain_view_event
   | Fretted of color_plain_view_event
   | Interline of color_plain_view_event
+
+type display =
+  | Flat of view
   | Pattern of mode
 
 type struc =

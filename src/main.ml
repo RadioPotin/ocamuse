@@ -1,7 +1,4 @@
 open Lwt
-open LTerm_geom
-open LTerm_key
-open Types
 
 module MENU = struct
 
@@ -11,55 +8,48 @@ module MENU = struct
 
 end
 
-let rec loop ui view =
+let bubble_color =
   let open Types in
-  LTerm_ui.wait ui >>= function
-  | LTerm_event.Key{ code = Up; _ } ->
-    (* blue fretboard *)
-    view := Fretted Up;
-    LTerm_ui.draw ui;
-    loop ui view
+  begin
+    function
+    | Fretted view_color -> view_color
+    | Plain view_color -> view_color
+    | Interline view_color -> view_color
+  end
 
-  | LTerm_event.Key{ code = Down; _ } ->
-    (* red fretboard *)
-    view := Fretted Down;
-    LTerm_ui.draw ui;
-    loop ui view
+let rec loop ui display =
+  let open Types in
+  begin
+    match !display with
+    | Flat mode ->
+      let color = bubble_color mode in
+      begin
+        LTerm_ui.wait ui >>= function
+        | LTerm_event.Key{ code = Up; _ } ->
+          (* blue fretboard *)
+          display := Flat (Fretted color);
+          LTerm_ui.draw ui;
+          loop ui display
 
-  | LTerm_event.Key{ code = Left; _ } ->
-    (* green fretboard *)
-    view := Plain Left;
-    LTerm_ui.draw ui;
-    loop ui view
+        | LTerm_event.Key{ code = Left; _ } ->
+          (* green fretboard *)
+          display := Flat (Plain color);
+          LTerm_ui.draw ui;
+          loop ui display
+        | LTerm_event.Key{ code = Right; _ } ->
+          (* green fretboard *)
+          display := Flat (Interline color);
+          LTerm_ui.draw ui;
+          loop ui display
 
-  | LTerm_event.Key{ code = Right; _ } ->
-    (* green fretboard *)
-    view := Interline Right;
-    LTerm_ui.draw ui;
-    loop ui view
+        | LTerm_event.Key{ code = Escape; _ } ->
+          return ()
+        | _ ->
+          loop ui display
+      end
+    | Pattern _ -> assert false
+  end
 
-  | LTerm_event.Key{ code = Enter; _ } ->
-    (* green fretboard *)
-    view := Pattern C_mode;
-    LTerm_ui.draw ui;
-    loop_pattern_view ui view
-
-  | LTerm_event.Key{ code = Escape; _ } ->
-    return ()
-  | _ ->
-    loop ui view
-
-and loop_pattern_view ui view =
-  LTerm_ui.wait ui >>= function
-  | LTerm_event.Key{ code = Enter; _ } ->
-    (* green fretboard *)
-    view := Pattern C_mode;
-    LTerm_ui.draw ui;
-    loop_pattern_view ui view
-  | LTerm_event.Key{ code = Escape; _ } ->
-    return ()
-  | _ ->
-    loop_pattern_view ui view
 
 (* ********************************************** *)
 (* Initialize a default fretboard for development *)
@@ -76,8 +66,9 @@ let fretboard  =
     ~range:13 ()
 (* ********************************************** *)
 (* ********************************************** *)
+open LTerm_geom
 let select_display_mode event size ctx fretboard =
-  let color = Display.COLOR.event_to_color_full_view event in
+  let color = Display.COLOR.event_to_color_flat_view event in
   let sub_ctx =
     let offset_of_sub_context = 15 in
     let position =
@@ -92,30 +83,33 @@ let select_display_mode event size ctx fretboard =
   in
   match event with
   | Types.Fretted _ ->
-    Display.DRAW.MATRIX.write_rows_with_no_interline sub_ctx fretboard color
+    Display.MATRIX.DRAW.write_rows_with_no_interline sub_ctx fretboard color
   | Types.Interline _ ->
-    Display.DRAW.MATRIX.write_rows_with_interlines sub_ctx fretboard color
+    Display.MATRIX.DRAW.write_rows_with_interlines sub_ctx fretboard color
   | Types.Plain _ ->
     let open LTerm_geom in
-    let offset_of_sub_context = 18 in
     let position =
       {
-        row1 = offset_of_sub_context + 1;
-        col1 = offset_of_sub_context * 2 + 4;
+        row1 = 19;
+        col1 = 42;
         row2 = size.rows - 1;
         col2 = size.cols - 1;
       }
     in
     let ctx = LTerm_draw.sub ctx position in
-    Display.DRAW.MATRIX.write_plain_rows ctx fretboard color
-  | Pattern _ ->
-    Display.DRAW.MATRIX.write_rows_with_interlines sub_ctx fretboard color
+    Display.MATRIX.DRAW.write_plain_rows ctx fretboard color
 
-let view_fretboard ctx event fretboard size =
-  let display_mode =
-    select_display_mode event size
-  in
-  display_mode ctx fretboard
+let view_fretboard ctx display fretboard size =
+  let open Types in
+  begin
+    match display with
+    | Flat e ->
+      let display_mode =
+        select_display_mode e size
+      in
+      display_mode ctx fretboard
+    | Pattern _m -> assert false
+  end
 
 (* ********************************************** *)
 (* ********************************************** *)
@@ -137,12 +131,15 @@ let draw lt_matrix m view =
   view_fretboard ctx view fretboard size
 
 let main () =
-  Lazy.force LTerm.stdout
-  >>= fun term ->
-  (* Coordinates of the message. *)
-  let view = ref (Plain Up) in
-  LTerm_ui.create term (fun lt_matrix size -> draw lt_matrix size !view)
-  >>= fun ui ->
-  Lwt.finalize (fun () -> loop ui view) (fun () -> LTerm_ui.quit ui)
+  let open Types in
+  begin
+    Lazy.force LTerm.stdout
+    >>= fun term ->
+    (* Coordinates of the message. *)
+    let display_mode = ref (Flat (Plain Blue)) in
+    LTerm_ui.create term (fun lt_matrix size -> draw lt_matrix size !display_mode)
+    >>= fun ui ->
+    Lwt.finalize (fun () -> loop ui display_mode) (fun () -> LTerm_ui.quit ui)
+  end
 
 let () = Lwt_main.run (main ())
