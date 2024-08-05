@@ -2,8 +2,61 @@
       a colourful output *)
 module COLOR : sig
   val event_to_color_flat_view : Types.view -> LTerm_style.color
+  val bubble_color : Types.view -> Types.color_plain_view_event
+  val rotate_to_prev : Types.color_plain_view_event -> Types.color_plain_view_event
+  val rotate_to_next : Types.color_plain_view_event -> Types.color_plain_view_event
 end
 = struct
+
+  let bubble_color =
+    let open Types in
+    begin
+      function
+      | Fretted view_color -> view_color
+      | Plain view_color -> view_color
+      | Interline view_color -> view_color
+    end
+
+  let rotate_to_prev =
+    let open Types in
+    function
+    | Black ->  Lwhite
+    | Red -> Lblack
+    | Green -> Lred
+    | Yellow -> Lgreen
+    | Blue -> Lyellow
+    | Magenta -> Blue
+    | Cyan -> Magenta
+    | White -> Cyan
+    | Lblack -> White
+    | Lred -> Lblack
+    | Lgreen -> Lred
+    | Lyellow -> Lgreen
+    | Lblue -> Lyellow
+    | Lmagenta -> Lblue
+    | Lcyan -> Lmagenta
+    | Lwhite -> Lcyan
+
+  let rotate_to_next =
+    let open Types in
+    function
+    | Black -> Lred
+    | Red -> Lgreen
+    | Green -> Lyellow
+    | Yellow -> Blue
+    | Blue -> Magenta
+    | Magenta -> Cyan
+    | Cyan -> White
+    | White -> Lblack
+    | Lblack -> Lred
+    | Lred -> Lgreen
+    | Lgreen -> Lyellow
+    | Lyellow -> Lblue
+    | Lblue -> Lmagenta
+    | Lmagenta-> Lcyan
+    | Lcyan -> Lwhite
+    | Lwhite -> Lblack
+
   let event_to_color =
     let open LTerm_style in
     let open Types in

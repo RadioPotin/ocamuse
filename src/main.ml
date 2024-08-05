@@ -8,21 +8,19 @@ module MENU = struct
 
 end
 
-let bubble_color =
+let update_color rotate =
   let open Types in
-  begin
-    function
-    | Fretted view_color -> view_color
-    | Plain view_color -> view_color
-    | Interline view_color -> view_color
-  end
+  function
+  | Fretted c -> Fretted (rotate c)
+  | Plain c -> Plain (rotate c)
+  | Interline c -> Interline (rotate c)
 
 let rec loop ui display =
   let open Types in
   begin
     match !display with
     | Flat mode ->
-      let color = bubble_color mode in
+      let color = Display.COLOR.bubble_color mode in
       begin
         LTerm_ui.wait ui >>= function
         | LTerm_event.Key{ code = Up; _ } ->
@@ -39,6 +37,17 @@ let rec loop ui display =
         | LTerm_event.Key{ code = Right; _ } ->
           (* green fretboard *)
           display := Flat (Interline color);
+          LTerm_ui.draw ui;
+          loop ui display
+        | LTerm_event.Key{ code = Prev_page; _ } ->
+          (* blue fretboard *)
+          display := Flat ( update_color Display.COLOR.rotate_to_prev mode);
+          LTerm_ui.draw ui;
+          loop ui display
+
+        | LTerm_event.Key{ code = Next_page; _ } ->
+          (* green fretboard *)
+          display := Flat ( update_color Display.COLOR.rotate_to_next mode);
           LTerm_ui.draw ui;
           loop ui display
 
@@ -136,7 +145,7 @@ let main () =
     Lazy.force LTerm.stdout
     >>= fun term ->
     (* Coordinates of the message. *)
-    let display_mode = ref (Flat (Plain Blue)) in
+    let display_mode = ref (Flat (Plain Lwhite)) in
     LTerm_ui.create term (fun lt_matrix size -> draw lt_matrix size !display_mode)
     >>= fun ui ->
     Lwt.finalize (fun () -> loop ui display_mode) (fun () -> LTerm_ui.quit ui)
