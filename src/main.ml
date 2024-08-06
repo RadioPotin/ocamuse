@@ -4,7 +4,7 @@ module MENU = struct
 
   let menu view =
     match view with
-    | _ -> {| Use arrow keys to change color - Up Down Left Righ for color change - Enter for Pattern view - Escape to return |}
+    | _ -> {| Use arrow keys to change view mode - Page Up / Page Down for color change - Enter for Pattern view - Escape to return |}
 
 end
 
@@ -28,34 +28,40 @@ let rec loop ui ocamuse_context =
         LTerm_ui.wait ui >>= function
         | LTerm_event.Key{ code = Up; _ } ->
           (* blue fretboard *)
-          ocamuse_context.display_mode := Flat (Fretted color);
+          ocamuse_context.display_mode
+            := Flat (Fretted color);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
         | LTerm_event.Key{ code = Left; _ } ->
           (* green fretboard *)
-          ocamuse_context.display_mode := Flat (Plain color);
+          ocamuse_context.display_mode
+            := Flat (Plain color);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
         | LTerm_event.Key{ code = Right; _ } ->
           (* green fretboard *)
-          ocamuse_context.display_mode := Flat (Interline color);
+          ocamuse_context.display_mode
+            := Flat (Interline color);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
         | LTerm_event.Key{ code = Prev_page; _ } ->
           (* blue fretboard *)
-          ocamuse_context.display_mode := Flat ( update_color Display.COLOR.rotate_to_prev mode);
+          ocamuse_context.display_mode
+            := Flat ( update_color Display.COLOR.rotate_to_prev mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
         | LTerm_event.Key{ code = Next_page; _ } ->
           (* green fretboard *)
-          ocamuse_context.display_mode := Flat ( update_color Display.COLOR.rotate_to_next mode);
+          ocamuse_context.display_mode
+            := Flat ( update_color Display.COLOR.rotate_to_next mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
         | LTerm_event.Key{ code = Enter; _ } ->
-          ocamuse_context.display_mode := Pattern (mode, C_mode);
+          ocamuse_context.display_mode
+            := Pattern (mode, C_mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
         | LTerm_event.Key{ code = Escape; _ } ->
@@ -69,35 +75,40 @@ let rec loop ui ocamuse_context =
         LTerm_ui.wait ui >>= function
         | LTerm_event.Key{ code = Up; _ } ->
           (* blue fretboard *)
-          ocamuse_context.display_mode := Pattern (Fretted color, mode);
+          ocamuse_context.display_mode
+            := Pattern (Fretted color, mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
-
         | LTerm_event.Key{ code = Left; _ } ->
           (* green fretboard *)
-          ocamuse_context.display_mode := Pattern (Plain color, mode);
+          ocamuse_context.display_mode
+            := Pattern (Plain color, mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
         | LTerm_event.Key{ code = Right; _ } ->
           (* green fretboard *)
-          ocamuse_context.display_mode := Pattern (Interline color, mode);
+          ocamuse_context.display_mode
+            := Pattern (Interline color, mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
         | LTerm_event.Key{ code = Prev_page; _ } ->
           (* blue fretboard *)
-          ocamuse_context.display_mode := Pattern ( update_color Display.COLOR.rotate_to_prev view, mode);
+          ocamuse_context.display_mode
+            := Pattern ( update_color Display.COLOR.rotate_to_prev view, mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
         | LTerm_event.Key{ code = Next_page; _ } ->
           (* green fretboard *)
-          ocamuse_context.display_mode := Pattern ( update_color Display.COLOR.rotate_to_next view, mode);
+          ocamuse_context.display_mode
+            := Pattern ( update_color Display.COLOR.rotate_to_next view, mode);
 
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
         | LTerm_event.Key{ code = Enter; _ } ->
-          ocamuse_context.display_mode := Pattern (view, mode);
+          ocamuse_context.display_mode
+            := Pattern (view, mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
         | LTerm_event.Key{ code = Escape; _ } ->
@@ -125,11 +136,11 @@ let select_full_view_display_mode size ctx ocamuse_context event =
     LTerm_draw.sub ctx position
   in
   match event with
-  | Types.Fretted _ ->
+  | Fretted _ ->
     Display.MATRIX.DRAW.LINE.write_rows_with_no_interline sub_ctx ocamuse_context.fretboard color
-  | Types.Interline _ ->
+  | Interline _ ->
     Display.MATRIX.DRAW.LINE.write_rows_with_interlines sub_ctx ocamuse_context.fretboard color
-  | Types.Plain _ ->
+  | Plain _ ->
     let open LTerm_geom in
     let position =
       {
@@ -142,7 +153,7 @@ let select_full_view_display_mode size ctx ocamuse_context event =
     let ctx = LTerm_draw.sub ctx position in
     Display.MATRIX.DRAW.LINE.write_plain_rows ctx ocamuse_context.fretboard color
 
-let select_pattern_view_display_mode size ctx ocamuse_context e =
+let select_pattern_view_display_mode size ctx ocamuse_context (view, mode) =
   let open Types in
   let open LTerm_geom in
   let _sub_ctx =
@@ -157,9 +168,8 @@ let select_pattern_view_display_mode size ctx ocamuse_context e =
     in
     LTerm_draw.sub ctx position
   in
-  let e, mode = e in
-  match e with
-  | Plain _color ->
+  match view with
+  | Plain color ->
     let open LTerm_geom in
     let position =
       {
@@ -170,7 +180,8 @@ let select_pattern_view_display_mode size ctx ocamuse_context e =
       }
     in
     let ctx = LTerm_draw.sub ctx position in
-    Display.MATRIX.DRAW.pattern ctx size ocamuse_context mode
+    ocamuse_context.base_colour := color;
+    Display.MATRIX.DRAW.plain_view_pattern ctx size ocamuse_context mode
   | _ -> assert false
 
 let view_fretboard ctx size ocamuse_context =
@@ -204,23 +215,22 @@ let draw lt_matrix m ocamuse_context =
 
 let default_context () =
   let open Types in
+  let fretboard =
+    let default_tuning () : Types.tuning =
+      List.map
+        (fun note -> Types.{ base = note; alteration = 0 })
+        [ E; A; D; G; B; E ]
+    in
+    let tuning = Some (default_tuning ()) in
+    Fretboard.init
+      ~tuning:(Option.value tuning ~default:(default_tuning ()))
+      ~range:13 () in
+
   {
     display_mode = ref (Flat (Plain Lwhite));
-    (* ********************************************** *)
-    (* Initialize a default fretboard for development *)
-    (* ********************************************** *)
-    fretboard =
-      let default_tuning () : Types.tuning =
-        List.map
-          (fun note -> Types.{ base = note; alteration = 0 })
-          [ E; A; D; G; B; E ]
-      in
-      let tuning = Some (default_tuning ()) in
-      Fretboard.init
-        ~tuning:(Option.value tuning ~default:(default_tuning ()))
-        ~range:13 ();
+    fretboard;
+    base_colour = ref Lwhite;
   }
-
 
 (* TODO: Add cli to chose between interactive or cli display *)
 let main () =

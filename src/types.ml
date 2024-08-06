@@ -91,4 +91,5 @@ type ocamuse_structure =
   {
     display_mode : display ref;
     fretboard : (note array) array;
+    base_colour : color_plain_view_event ref;
   }

@@ -1,6 +1,6 @@
-(** module COLOR is destined to hold all functions and operations on displaying
-      a colourful output *)
 module COLOR : sig
+  (** module COLOR is destined to hold all functions and operations on displaying
+        a colourful output *)
   val event_to_color_flat_view : Types.view -> LTerm_style.color
   val bubble_color : Types.view -> Types.color_plain_view_event
   val rotate_to_prev : Types.color_plain_view_event -> Types.color_plain_view_event
@@ -84,6 +84,7 @@ end
     | Fretted event -> event_to_color event
     | Plain event -> event_to_color event
     | Interline event -> event_to_color event
+
 end
 
 
@@ -183,7 +184,6 @@ module MATRIX = struct
           (* interline *)
           write_interline struc;
           move_cursor struc;
-
           incr i
         done
 
@@ -230,29 +230,35 @@ module MATRIX = struct
 
       (* This module will hold all functions that aim to write a PP fret directly to the keyboard according to view *)
 
-     (*
-+      For now, the deal is to implement displays similar to the ones provided
-+      by the Plain, Fretted and Interline view modes.
+    (*
++     For now, the deal is to implement displays similar to the ones provided
++     by the Plain, Fretted and Interline view modes.
 +
-+      Instead of [LTerm_draw.draw_styled], we would use the [LTerm_draw.draw_char] to achieve that.
++     Instead of [LTerm_draw.draw_styled], we would use the [LTerm_draw.draw_char] to achieve that.
 +
-+      One way to go would be to print each fretboard view once and save
-+      the context-world coordinates of each important note to a Hashtbl with
-+      their relative role (Root, Tonic, Major 3rd, etc) for the given type of
-+      Pattern then mapping a given role, in the context to a specific color to
-+      go style directly in the context.
++     One way to go would be to print each fretboard view once and save
++     the context-world coordinates of each important note to a Hashtbl with
++     their relative role (Root, Tonic, Major 3rd, etc) for the given type of
++     Pattern then mapping a given role, in the context to a specific color to
++     go style directly in the context.
 +
-+      We could then later aim at making the color selection customisable that way
-+    *)
++     We could then later aim at making the color selection customisable that way
++   *)
 
     end
 
     (* This module will hold all functions that aim to build and highlight a
        given pattern on the fretboard *)
-    let pattern _size _ctx _ocamuse_context mode =
+    let plain_view_pattern _size _ctx ocamuse_context mode =
       let open Types in
-      match mode with
-      | C_mode | _ -> failwith "PATTERNS.fretboard"
+      begin
+        match mode with
+        | C_mode ->
+          let c_major = Ocamuse.build_tonality C_mode { base = C; alteration = 0} in
+          let scale_degree_tbl = Ocamuse.build_degree_tbl c_major in
+          let degree_colour_tbl = Ocamuse.build_degree_colour_tbl c_major in ()
+        | _ -> failwith "PATTERNS.fretboard"
+      end
 
   end
 

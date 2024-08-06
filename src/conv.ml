@@ -96,3 +96,15 @@ let rec int_to_note p_alt =
   | 10 -> { base = G; alteration = 0 }
   | 11 -> alter (G, A)
   | n -> int_to_note p_alt (n - 12)
+
+let degree_to_colour =
+  let open Types in
+  function
+  | 1 -> Lred
+  | 2 -> Lgreen
+  | 3 -> Lblue
+  | 4 -> Lyellow
+  | 5 -> Lmagenta
+  | 6 -> Lcyan
+  | 7 -> Lblack
+  | _n -> assert false
