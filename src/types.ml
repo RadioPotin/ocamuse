@@ -64,23 +64,18 @@ type color_plain_view_event =
   | Lcyan
   | Lwhite
 
-type context =
-  {
-    mode : mode;
-    base_note : note;
-    chord : chord
-  }
-
 type view =
   | Plain of color_plain_view_event
   | Fretted of color_plain_view_event
   | Interline of color_plain_view_event
 
+type fretboard = ( int * note array ) array
+
 type display =
   | Flat of view
-  | Pattern of view * context
+  | Pattern of view * mode
 
-type struc =
+type draw_struc =
   {
     string: int ref;
     offset : int ref;
@@ -92,4 +87,8 @@ type struc =
     fretboard : (note array) array;
   }
 
-type fretboard = ( int * note array ) array
+type ocamuse_structure =
+  {
+    display_mode : display ref;
+    fretboard : (note array) array;
+  }
