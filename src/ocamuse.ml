@@ -1,7 +1,7 @@
 let name_chord =
   let open Types in
   fun (root : note) (chord_type : chord) : string ->
-    let base_str = Pp.NOTES.sprint_note root in
+    let base_str = Pp.NOTES.FMT.sprint_note root in
     let suffix_str = Conv.chord_to_string chord_type in
     base_str ^ suffix_str
 
@@ -75,36 +75,6 @@ let build_diatonic_triads_sequence mode note =
   let diatonic_chord_sequence = chords_of_mode mode in
   let tonality = build_tonality mode note in
   List.map2 (fun chord note -> (note, chord)) diatonic_chord_sequence tonality
-
-(* [generate_chord note chord_type] generates a list of [note]s for the chord
-       defined by [chord_type] with [note] as the root note
-   let generate_chord (root_note : Types.note) (chord_type : Types.chord) :
-       Types.note list =
-     let intervals =
-       match chord_type with
-       | Major -> [ 0; 4; 7 ]
-       | Minor -> [ 0; 3; 7 ]
-       | Dimin -> [ 0; 3; 6 ]
-       | Augment -> [ 0; 4; 8 ]
-       | Suspend2 -> [ 0; 2; 7 ]
-       | Suspend4 -> [ 0; 5; 7 ]
-       | Major7 -> [ 0; 4; 7; 11 ]
-       | Domin7 -> [ 0; 4; 7; 10 ]
-       | Minor7 -> [ 0; 3; 7; 10 ]
-       | HalfDim7 -> [ 0; 3; 6; 10 ]
-       | Sixth -> [ 0; 4; 7; 9 ]
-       | MinorSixth -> [ 0; 3; 7; 9 ]
-     in
-     let note_to_add_semitones_to = { root_note with alteration = 0 } in
-     let rec generate_chord_helper notes intervals_remaining =
-       match intervals_remaining with
-       | [] -> List.rev notes
-       | hd :: tl ->
-         let next_note = add_semitones note_to_add_semitones_to hd in
-         generate_chord_helper (next_note :: notes) tl
-     in
-     generate_chord_helper [ root_note ] intervals
-*)
 
 (*
   TODO:

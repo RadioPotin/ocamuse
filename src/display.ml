@@ -20,42 +20,42 @@ end
   let rotate_to_prev =
     let open Types in
     function
-    | Black ->  Lwhite
-    | Red -> Lblack
-    | Green -> Lred
-    | Yellow -> Lgreen
-    | Blue -> Lyellow
-    | Magenta -> Blue
-    | Cyan -> Magenta
-    | White -> Cyan
-    | Lblack -> White
-    | Lred -> Lblack
-    | Lgreen -> Lred
-    | Lyellow -> Lgreen
-    | Lblue -> Lyellow
+    | Black ->    Lwhite
+    | Red ->      Lblack
+    | Green ->    Lred
+    | Yellow ->   Lgreen
+    | Blue ->     Lyellow
+    | Magenta ->  Blue
+    | Cyan ->     Magenta
+    | White ->    Cyan
+    | Lblack ->   White
+    | Lred ->     Lblack
+    | Lgreen ->   Lred
+    | Lyellow ->  Lgreen
+    | Lblue ->    Lyellow
     | Lmagenta -> Lblue
-    | Lcyan -> Lmagenta
-    | Lwhite -> Lcyan
+    | Lcyan ->    Lmagenta
+    | Lwhite ->   Lcyan
 
   let rotate_to_next =
     let open Types in
     function
-    | Black -> Lred
-    | Red -> Lgreen
-    | Green -> Lyellow
-    | Yellow -> Blue
-    | Blue -> Magenta
+    | Black ->   Lred
+    | Red ->     Lgreen
+    | Green ->   Lyellow
+    | Yellow ->  Blue
+    | Blue ->    Magenta
     | Magenta -> Cyan
-    | Cyan -> White
-    | White -> Lblack
-    | Lblack -> Lred
-    | Lred -> Lgreen
-    | Lgreen -> Lyellow
+    | Cyan ->    White
+    | White ->   Lblack
+    | Lblack ->  Lred
+    | Lred ->    Lgreen
+    | Lgreen ->  Lyellow
     | Lyellow -> Lblue
-    | Lblue -> Lmagenta
+    | Lblue ->   Lmagenta
     | Lmagenta-> Lcyan
-    | Lcyan -> Lwhite
-    | Lwhite -> Lblack
+    | Lcyan ->   Lwhite
+    | Lwhite ->  Lblack
 
   let event_to_color =
     let open LTerm_style in

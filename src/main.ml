@@ -15,6 +15,18 @@ let update_color rotate =
   | Plain c -> Plain (rotate c)
   | Interline c -> Interline (rotate c)
 
+let default_context () =
+  let open Types in
+  {
+    mode = C_mode;
+    base_note =
+      {
+        base = C;
+        alteration = 0;
+      };
+    chord = Major;
+  }
+
 let rec loop ui display =
   let open Types in
   begin
@@ -51,13 +63,59 @@ let rec loop ui display =
           LTerm_ui.draw ui;
           loop ui display
 
+        | LTerm_event.Key{ code = Enter; _ } ->
+          display := Pattern (mode, default_context ());
+          LTerm_ui.draw ui;
+          loop ui display
         | LTerm_event.Key{ code = Escape; _ } ->
           return ()
         | _ ->
           loop ui display
       end
-    | Pattern _ -> assert false
+    | Pattern (mode, context) ->
+      begin
+        let color = Display.COLOR.bubble_color mode in
+        LTerm_ui.wait ui >>= function
+        | LTerm_event.Key{ code = Up; _ } ->
+          (* blue fretboard *)
+          display := Pattern (Fretted color, context);
+          LTerm_ui.draw ui;
+          loop ui display
+
+        | LTerm_event.Key{ code = Left; _ } ->
+          (* green fretboard *)
+          display := Pattern (Plain color, context);
+          LTerm_ui.draw ui;
+          loop ui display
+        | LTerm_event.Key{ code = Right; _ } ->
+          (* green fretboard *)
+          display := Pattern (Interline color, context);
+          LTerm_ui.draw ui;
+          loop ui display
+        | LTerm_event.Key{ code = Prev_page; _ } ->
+          (* blue fretboard *)
+          display := Pattern ( update_color Display.COLOR.rotate_to_prev mode, context);
+          LTerm_ui.draw ui;
+          loop ui display
+
+        | LTerm_event.Key{ code = Next_page; _ } ->
+          (* green fretboard *)
+          display := Pattern ( update_color Display.COLOR.rotate_to_next mode, context);
+          LTerm_ui.draw ui;
+          loop ui display
+
+        | LTerm_event.Key{ code = Enter; _ } ->
+          display := Pattern (mode, context);
+          LTerm_ui.draw ui;
+          loop ui display
+        | LTerm_event.Key{ code = Escape; _ } ->
+          return ()
+        | _ ->
+          loop ui display
+      end
+
   end
+
 
 
 (* ********************************************** *)
@@ -76,7 +134,7 @@ let fretboard  =
 (* ********************************************** *)
 (* ********************************************** *)
 open LTerm_geom
-let select_display_mode event size ctx fretboard =
+let select_full_view_display_mode event size ctx fretboard =
   let color = Display.COLOR.event_to_color_flat_view event in
   let sub_ctx =
     let offset_of_sub_context = 15 in
@@ -114,10 +172,10 @@ let view_fretboard ctx display fretboard size =
     match display with
     | Flat e ->
       let display_mode =
-        select_display_mode e size
+        select_full_view_display_mode e size
       in
       display_mode ctx fretboard
-    | Pattern _m -> assert false
+    | Pattern (_m, _c) -> assert false
   end
 
 (* ********************************************** *)
@@ -139,6 +197,7 @@ let draw lt_matrix m view =
     LTerm_draw.Light;
   view_fretboard ctx view fretboard size
 
+(* TODO: Add cli to chose between interactive or cli display *)
 let main () =
   let open Types in
   begin

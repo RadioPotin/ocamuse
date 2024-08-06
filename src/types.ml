@@ -64,6 +64,13 @@ type color_plain_view_event =
   | Lcyan
   | Lwhite
 
+type context =
+  {
+    mode : mode;
+    base_note : note;
+    chord : chord
+  }
+
 type view =
   | Plain of color_plain_view_event
   | Fretted of color_plain_view_event
@@ -71,7 +78,7 @@ type view =
 
 type display =
   | Flat of view
-  | Pattern of mode
+  | Pattern of view * context
 
 type struc =
   {

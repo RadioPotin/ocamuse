@@ -144,7 +144,7 @@ module FRETBOARD = struct
             let i = ref 0 in
             let alteration_detected = ref false in
             let key = ref key in
-            while is_in_bound !key do
+            while is_in_bound !key && not !alteration_detected do
               set_alteration_flag alteration_detected !key;
               i := !i + 1;
               key := !i, string_nb + 1
