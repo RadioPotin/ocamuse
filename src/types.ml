@@ -75,16 +75,34 @@ type display =
   | Flat of view
   | Pattern of view * mode
 
-type draw_struc =
+type flat_view_draw_struc =
   {
     string: int ref;
     offset : int ref;
-    cursor_i : int ref;
+    cursor_j : int ref;
     number_of_strings: int;
     ctx : LTerm_draw.context;
     color : LTerm_style.color;
     guitar_string : (note array) ref;
     fretboard : (note array) array;
+  }
+
+type pattern_view_draw_struc =
+  {
+    view : view;
+    mode : mode;
+    string: int ref;
+    offset : int ref;
+    cursor_i : int ref;
+    cursor_j : int ref;
+    number_of_frets: int;
+    number_of_strings: int;
+    ctx : LTerm_draw.context;
+    color : LTerm_style.color;
+    fretboard : (note array) array;
+    guitar_string : (note array) ref;
+    notes_to_degree_tbl: (note, int) Hashtbl.t;
+    degree_to_color_tbl: (int, color_plain_view_event) Hashtbl.t;
   }
 
 type ocamuse_structure =

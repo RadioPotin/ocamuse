@@ -106,5 +106,5 @@ let degree_to_colour =
   | 4 -> Lyellow
   | 5 -> Lmagenta
   | 6 -> Lcyan
-  | 7 -> Lblack
+  | 7 -> Green
   | _n -> assert false

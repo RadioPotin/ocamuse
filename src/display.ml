@@ -1,12 +1,6 @@
-module COLOR : sig
+module COLOR = struct
   (** module COLOR is destined to hold all functions and operations on displaying
         a colourful output *)
-  val event_to_color_flat_view : Types.view -> LTerm_style.color
-  val bubble_color : Types.view -> Types.color_plain_view_event
-  val rotate_to_prev : Types.color_plain_view_event -> Types.color_plain_view_event
-  val rotate_to_next : Types.color_plain_view_event -> Types.color_plain_view_event
-end
-= struct
 
   let bubble_color =
     let open Types in
@@ -89,34 +83,34 @@ end
 
 
 module MATRIX = struct
+  open Types
   module DRAW = struct
     module LINE = struct
-      open Types
       open LTerm_text
 
-      let write_interline struc =
+      let write_interline (struc :Types.flat_view_draw_struc) =
         let open LTerm_draw in
         let guitar_string = struc.guitar_string in
         let string_line =
           Pp.FRETBOARD.FMT.stringify_interline (struc.string, !guitar_string)
         in
         draw_styled struc.ctx
-          !(struc.cursor_i)
+          !(struc.cursor_j)
           !(struc.offset)
           (eval [B_fg struc.color; S string_line; E_fg])
 
-      let write_frets struc =
+      let write_frets (struc :Types.flat_view_draw_struc) =
         let open LTerm_draw in
         let guitar_string = struc.guitar_string in
         let string_line =
           Pp.FRETBOARD.FMT.stringify_frets (struc.string, !guitar_string)
         in
         draw_styled struc.ctx
-          !(struc.cursor_i)
+          !(struc.cursor_j)
           !(struc.offset)
           (eval [B_fg struc.color; S string_line; E_fg])
 
-      let write_fret_numbers struc =
+      let write_fret_numbers (struc :Types.flat_view_draw_struc) =
         let guitar_string = struc.guitar_string in
         let open LTerm_draw in
         let fret_line =
@@ -124,44 +118,56 @@ module MATRIX = struct
             (struc.string, !guitar_string)
         in
         draw_styled struc.ctx
-          !(struc.cursor_i)
+          !(struc.cursor_j)
           !(struc.offset)
           (eval [B_fg struc.color ; S fret_line; E_fg])
 
-      let write_plain_frets struc =
+      let write_plain_frets (struc :Types.flat_view_draw_struc) =
         let open LTerm_draw in
         let string_line =
           Pp.FRETBOARD.FMT.stringify_plain_string (!(struc.string), !(struc.guitar_string))
         in
         draw_styled struc.ctx
-          !(struc.cursor_i)
+          !(struc.cursor_j)
           !(struc.offset)
           (eval [B_fg struc.color; S string_line; E_fg])
 
       (* ***************************** *)
       (* main current writing function *)
       (* ***************************** *)
-      let make_struc ctx fretboard color  =
+      let make_struc ctx fretboard color : Types.flat_view_draw_struc  =
         let offset_for_frets_numbers = 4 in
         let number_of_strings = Array.length fretboard in
-        let cursor_i = ref 0 in
+        let cursor_j = ref 0 in
         let offset = ref offset_for_frets_numbers in
         {
           ctx;
           color;
           offset;
-          cursor_i;
+          cursor_j;
           fretboard;
           string = ref 0;
           number_of_strings;
           guitar_string = ref fretboard.(0);
         }
 
+      let write_plain_rows ctx fretboard color =
+        let struc = make_struc ctx fretboard color in
+        let update_field field i = field := i in
+        let i = ref 0 in
+        while !i < struc.number_of_strings do
+          update_field struc.string !i;
+          update_field struc.guitar_string struc.fretboard.(!i) ;
+          update_field struc.cursor_j (!(struc.cursor_j) + 1);
+          write_plain_frets struc;
+          i := !i + 1
+        done
+
       let write_rows_with_interlines ctx fretboard color =
         let struc = make_struc ctx fretboard color in
         let update_field field i = field := i in
-        let move_cursor struc =
-          update_field struc.cursor_i (!(struc.cursor_i) + 1)
+        let move_cursor (struc : Types.flat_view_draw_struc) =
+          update_field struc.cursor_j (!(struc.cursor_j) + 1)
         in
         (* top fret numbers *)
         write_fret_numbers struc;
@@ -185,21 +191,6 @@ module MATRIX = struct
           write_interline struc;
           move_cursor struc;
           incr i
-        done
-
-      let write_plain_rows ctx fretboard color =
-        let struc = make_struc ctx fretboard color in
-        let update_field field i = field := i in
-        let move_cursor struc =
-          update_field struc.cursor_i (!(struc.cursor_i) + 1)
-        in
-        let i = ref 0 in
-        while !i < struc.number_of_strings do
-          write_plain_frets struc;
-          move_cursor struc;
-          update_field struc.string !i;
-          update_field struc.guitar_string struc.fretboard.(!i) ;
-          i := !i + 1
         done
 
       let write_rows_with_no_interline ctx fretboard color =
@@ -245,19 +236,142 @@ module MATRIX = struct
 +     We could then later aim at making the color selection customisable that way
 +   *)
 
+      let make_color struc note =
+        match Hashtbl.find_opt struc.notes_to_degree_tbl note with
+        | None -> struc.color
+        | Some degree ->
+          Hashtbl.find struc.degree_to_color_tbl degree
+          |> COLOR.event_to_color
+
+      let writerate struc style string =
+        String.iteri (fun i c ->
+          LTerm_draw.draw_char struc.ctx
+            (!(struc.cursor_j) + !(struc.offset))
+            (!(struc.cursor_i) + i + !(struc.offset))
+            (Zed_char.unsafe_of_char c)
+            ~style
+        ) string
+
+      let write_head struc _j _i =
+        writerate struc
+          (LTerm_style.({
+              none with
+              foreground = Some (LTerm_style.lwhite)
+            })) "|" ; "|"
+
+      let write_separator struc _j _i =
+        writerate struc
+          (LTerm_style.({
+              none with
+              foreground = Some (LTerm_style.lwhite)
+            })) "-" ; "-"
+
+      let write_note (struc : Types.pattern_view_draw_struc) j i =
+        let note = struc.fretboard.(j).(i) in
+        let note_string =
+          Pp.FRETBOARD.FMT.stringify
+            Pp.NOTES.FMT.print_note
+            note
+        in
+        let style =
+          LTerm_style.({
+            none with
+            bold = Some true;
+            foreground = Some (make_color struc note)
+          })
+        in
+        writerate struc style note_string ; note_string
+
+      let write_plain_note (struc : Types.pattern_view_draw_struc) fret_j fret_i  =
+        let open Types in
+        let update_cursor struc cell =
+          let length = String.length cell in
+          struc.cursor_i := (!(struc.cursor_i) + length)
+        in
+        if !fret_i = 0 then begin
+          update_cursor struc @@ write_head struc !fret_j !fret_i;
+          update_cursor struc @@ write_note struc !fret_j !fret_i;
+          update_cursor struc @@ write_head struc !fret_j !fret_i
+        end
+        else begin
+          update_cursor struc @@ write_note struc !fret_j !fret_i;
+          update_cursor struc @@ write_separator struc !fret_j !fret_i
+        end
+
+      let write_pattern (struc : Types.pattern_view_draw_struc) =
+        let update_field field i = field := i in
+        match struc.view with
+        | Plain _ ->
+          let j = ref 0 in
+          let i = ref 0 in
+          while !j < struc.number_of_strings do
+            i := 0;
+            update_field struc.cursor_j !j;
+            update_field struc.cursor_i !i;
+            while !i < struc.number_of_frets do
+              write_plain_note struc j i;
+              i := !i + 1
+            done;
+            j := !j + 1
+          done;
+        | _ -> assert false
+
     end
 
     (* This module will hold all functions that aim to build and highlight a
        given pattern on the fretboard *)
-    let plain_view_pattern _size _ctx ocamuse_context mode =
+    let view_pattern ctx view ocamuse_context mode =
       let open Types in
+      let make_pattern_struc
+          ctx
+          mode
+          view
+          notes_to_degree_tbl
+          degree_to_color_tbl
+          ocamuse_context
+        : Types.pattern_view_draw_struc
+        =
+        let cursor_i = ref 0 in
+        let cursor_j = ref 0 in
+        let offset_for_frets_numbers = 4 in
+        let fretboard = ocamuse_context.fretboard in
+        let offset = ref offset_for_frets_numbers in
+        let number_of_strings = Array.length ocamuse_context.fretboard in
+        let color = COLOR.event_to_color !(ocamuse_context.base_colour) in
+        let number_of_frets = Array.length ocamuse_context.fretboard.(0) in
+        {
+          ctx;
+          mode;
+          view;
+          color;
+          offset;
+          cursor_i;
+          cursor_j;
+          fretboard;
+          string = ref 0;
+          number_of_frets;
+          number_of_strings;
+          notes_to_degree_tbl;
+          degree_to_color_tbl;
+          guitar_string = ref fretboard.(0);
+        }
+      in
       begin
-        match mode with
-        | C_mode ->
-          let c_major = Ocamuse.build_tonality C_mode { base = C; alteration = 0} in
-          let scale_degree_tbl = Ocamuse.build_degree_tbl c_major in
-          let degree_colour_tbl = Ocamuse.build_degree_colour_tbl c_major in ()
-        | _ -> failwith "PATTERNS.fretboard"
+        let tonality = Ocamuse.build_tonality mode { base = C; alteration = 0} in
+        (* make table with Types.notes as keys, and int as value (key degrees) *)
+        let notes_to_degree_tbl = Ocamuse.build_degree_tbl tonality in
+        (* make table with int (key degrees) as keys, and Types.color_plain_view_event as value  *)
+        let degree_to_colour_tbl = Ocamuse.build_degree_colour_tbl tonality in
+        let struc =
+          make_pattern_struc
+            ctx
+            mode
+            view
+            notes_to_degree_tbl
+            degree_to_colour_tbl
+            ocamuse_context
+        in
+        CELL.write_pattern struc
       end
 
   end

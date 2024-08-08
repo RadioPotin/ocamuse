@@ -152,21 +152,48 @@ module FRETBOARD = struct
             !alteration_detected
           in
           let should_space = scan_column (fret_nb, string_number) in
-          if should_space then
-            if fret_nb < 11 then
-              match Conv.note_to_int note with
-              | 1 | 4 | 6 | 9 | 11 ->
-                if should_space then
-                  Format.fprintf fmt {|%a-|} NOTES.FMT.print_note note
-                else
-                  Format.fprintf fmt {|%a-|} NOTES.FMT.print_note note
-              | _ ->
-                if should_space then
-                  Format.fprintf fmt {|%a--|} NOTES.FMT.print_note note
-                else
-                  Format.fprintf fmt {|%a|} NOTES.FMT.print_note note
-            else
-              Format.fprintf fmt {|%a|} NOTES.FMT.print_note note
+
+          let pp_plain_note note =
+            Format.fprintf fmt {|%a|} NOTES.FMT.print_note note
+          in
+          let pp_note_fret_no_space note =
+            Format.fprintf fmt {|%a||} NOTES.FMT.print_note note
+          in
+          let pp_note_fret_with_space note =
+            Format.fprintf fmt {|%a ||} NOTES.FMT.print_note note
+          in
+          let pp_note_with_separator note =
+            Format.fprintf fmt {|%a-|} NOTES.FMT.print_note note
+          in
+          let pp_note_with_separators note =
+            Format.fprintf fmt {|%a--|} NOTES.FMT.print_note note
+          in
+
+          if fret_nb = 0 then
+            match Conv.note_to_int note with
+            | 1 | 4 | 6 | 9 | 11 ->
+              if should_space then
+                pp_note_fret_no_space note
+              else
+                pp_note_fret_with_space note
+            | _ ->
+              pp_note_fret_with_space note
+          else
+          if fret_nb < 10 then
+            match Conv.note_to_int note with
+            | 1 | 4 | 6 | 9 | 11 ->
+              pp_note_with_separator note
+            | _ ->
+              pp_note_with_separators note
+          else if fret_nb = 11 then
+            match Conv.note_to_int note with
+            | 1 | 4 | 6 | 9 | 11 ->
+              pp_note_fret_no_space note
+            | _ ->
+              if should_space then
+                pp_note_fret_with_space note
+              else
+                pp_plain_note note
 
     let print_plain_frets fmt (string_nb, string) =
       iterate_over_string
