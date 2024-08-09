@@ -100,7 +100,8 @@ let rec int_to_note p_alt =
 let degree_to_colour =
   let open Types in
   function
-  | 1 -> Lred
+  | 0 -> Lred
+  | 1 -> Lwhite
   | 2 -> Lgreen
   | 3 -> Lblue
   | 4 -> Lyellow

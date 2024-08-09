@@ -98,7 +98,7 @@ type pattern_view_draw_struc =
     number_of_frets: int;
     number_of_strings: int;
     ctx : LTerm_draw.context;
-    color : color_plain_view_event;
+    color : LTerm_style.color;
     fretboard : (note array) array;
     guitar_string : (note array) ref;
     notes_to_degree_tbl: (note, int) Hashtbl.t;

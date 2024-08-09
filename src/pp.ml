@@ -77,6 +77,20 @@ module COLOR = struct
     | Fretted event -> event_to_color event
     | Plain event -> event_to_color event
     | Interline event -> event_to_color event
+
+  let is_equal color colour : bool =
+    let open LTerm_style in
+    let s1 = {none with foreground = Some color} in
+    let s2 = {none with foreground = Some colour} in
+    LTerm_style.equal s1 s2
+
+  let find_color struc note =
+    let open Types in
+    match Hashtbl.find_opt struc.notes_to_degree_tbl note with
+    | None -> struc.color
+    | Some degree ->
+      Hashtbl.find struc.degree_to_color_tbl degree
+
 end
 
 module NOTES = struct

@@ -72,6 +72,7 @@ let rec loop ui ocamuse_context =
     | Pattern (view, mode) ->
       begin
         let color = Pp.COLOR.bubble_color view in
+        ocamuse_context.base_colour := color;
         LTerm_ui.wait ui >>= function
 
         | LTerm_event.Key{ code = Up; _ } ->
@@ -106,7 +107,6 @@ let rec loop ui ocamuse_context =
           (* green fretboard *)
           ocamuse_context.display_mode
           := Pattern ( update_color Pp.COLOR.rotate_to_next view, mode);
-
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
@@ -247,7 +247,7 @@ let main () =
           ~tuning:(Option.value tuning ~default:(default_tuning ()))
           ~range:13 ()
       in
-      let base_colour = ref Lwhite in
+      let base_colour = ref Lblack in
       {
         display_mode;
         fretboard;

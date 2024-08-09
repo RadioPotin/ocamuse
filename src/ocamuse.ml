@@ -79,18 +79,23 @@ let build_diatonic_triads_sequence mode note =
 
 let build_degree_tbl mode =
   let degree_tbl = Hashtbl.create 512 in
-  List.iteri (fun i note -> Hashtbl.add degree_tbl note (i + 1)) mode;
+  List.iteri (fun i note -> Hashtbl.add degree_tbl note (i)) mode;
   degree_tbl
 
 let build_degree_colour_tbl mode =
   let degree_colour_tbl = Hashtbl.create 512 in
   List.iteri
     (fun i _note ->
-        let color = Conv.degree_to_colour (i + 1) in
+        let color = Conv.degree_to_colour (i) in
         let color = Pp.COLOR.event_to_color color in
-        Hashtbl.add degree_colour_tbl (i + 1) color)
+        Hashtbl.add degree_colour_tbl (i) color)
     mode;
   degree_colour_tbl
+
+
+let is_diatonic struc note =
+  let open Types in
+  Hashtbl.mem struc.notes_to_degree_tbl note
 
 (*
   TODO:

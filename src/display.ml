@@ -152,13 +152,6 @@ module MATRIX = struct
 +     We could then later aim at making the color selection customisable that way
 +   *)
 
-      let make_color struc note =
-        match Hashtbl.find_opt struc.notes_to_degree_tbl note with
-        | None -> Pp.COLOR.event_to_color @@ struc.color
-        | Some degree ->
-          Hashtbl.find struc.degree_to_color_tbl degree
-
-
       let writerate struc style string =
         String.iteri (fun i c ->
           LTerm_draw.draw_char struc.ctx
@@ -177,26 +170,14 @@ module MATRIX = struct
             Pp.NOTES.FMT.print_note
             note
         in
-        let note_color = make_color struc note in
-        let s = { none with foreground = Some note_color } in
-        let default =
+        let bold = Ocamuse.is_diatonic struc note in
+        let note_color = Pp.COLOR.find_color struc note in
+        let style =
           {
             none with
-            foreground = Some (Pp.COLOR.event_to_color struc.color)
+            bold = Some bold;
+            foreground = Some (note_color)
           }
-        in
-        let style =
-          if LTerm_style.equal s default then
-            LTerm_style.({
-              none with
-              foreground = Some default
-            })
-          else
-            LTerm_style.({
-              none with
-              bold = Some true;
-              foreground = Some (note_color)
-            })
         in
         writerate struc style note_string ; note_string
 
@@ -237,7 +218,7 @@ module MATRIX = struct
         in
         writerate struc (LTerm_style.({
           none with
-          foreground = Some (Pp.COLOR.event_to_color struc.color)
+          foreground = Some struc.color
         })) spacing;
         spacing
 
@@ -289,7 +270,7 @@ module MATRIX = struct
         let fretboard = ocamuse_context.fretboard in
         let offset = ref offset_for_frets_numbers in
         let number_of_strings = Array.length ocamuse_context.fretboard in
-        let color = !(ocamuse_context.base_colour) in
+        let color = Pp.COLOR.event_to_color !(ocamuse_context.base_colour) in
         let number_of_frets = Array.length ocamuse_context.fretboard.(0) in
         {
           ctx;
@@ -310,7 +291,7 @@ module MATRIX = struct
       in
       begin
         let tonality = Ocamuse.build_tonality mode { base = C; alteration = 0} in
-        (* make table with Types.notes as keys, and int as value (key degrees) *)
+        (* make table with Types.notes as keys, and int falseas value (key degrees) *)
         let notes_to_degree_tbl = Ocamuse.build_degree_tbl tonality in
         (* make table with int (key degrees) as keys, and Types.color_plain_view_event as value  *)
         let degree_to_colour_tbl = Ocamuse.build_degree_colour_tbl tonality in
