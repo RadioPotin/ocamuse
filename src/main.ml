@@ -146,9 +146,9 @@ let select_full_view_display_mode size ctx ocamuse_context event =
   in
   match event with
   | Fretted _ ->
-    Display.MATRIX.DRAW.LINE.write_rows_with_no_interline sub_ctx ocamuse_context.fretboard color
+    Display.view_rows_with_no_interline sub_ctx ocamuse_context.fretboard color
   | Interline _ ->
-    Display.MATRIX.DRAW.LINE.write_rows_with_interlines sub_ctx ocamuse_context.fretboard color
+    Display.view_rows_with_interlines sub_ctx ocamuse_context.fretboard color
   | Plain _ ->
     let open LTerm_geom in
     let position =
@@ -160,7 +160,7 @@ let select_full_view_display_mode size ctx ocamuse_context event =
       }
     in
     let ctx = LTerm_draw.sub ctx position in
-    Display.MATRIX.DRAW.LINE.write_plain_rows ctx ocamuse_context.fretboard color
+    Display.view_plain_rows ctx ocamuse_context.fretboard color
 
 let select_pattern_view_display_mode size ctx ocamuse_context (view, mode) =
   let open Types in
@@ -180,10 +180,10 @@ let select_pattern_view_display_mode size ctx ocamuse_context (view, mode) =
   match view with
   | Fretted color ->
     ocamuse_context.base_colour := color;
-    Display.MATRIX.DRAW.view_pattern sub_ctx view ocamuse_context mode
+    Display.view_pattern sub_ctx view ocamuse_context mode
   | Interline color ->
     ocamuse_context.base_colour := color;
-    Display.MATRIX.DRAW.view_pattern sub_ctx view ocamuse_context mode
+    Display.view_pattern sub_ctx view ocamuse_context mode
   | Plain color ->
     let open LTerm_geom in
     let position =
@@ -196,7 +196,7 @@ let select_pattern_view_display_mode size ctx ocamuse_context (view, mode) =
     in
     let ctx = LTerm_draw.sub ctx position in
     ocamuse_context.base_colour := color;
-    Display.MATRIX.DRAW.view_pattern ctx view ocamuse_context mode
+    Display.view_pattern ctx view ocamuse_context mode
 
 let view_fretboard ctx size ocamuse_context =
   let open Types in

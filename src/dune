@@ -1,7 +1,7 @@
 (executable
  (name main)
  (libraries lambda-term lwt lwt.unix zed)
- (modules ocamuse types conv fretboard pp display main))
+ (modules ocamuse types conv fretboard pp draw_line draw_cell display main))
 
 (env
  (dev

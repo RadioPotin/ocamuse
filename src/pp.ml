@@ -1,98 +1,3 @@
-module COLOR = struct
-  (** module COLOR is destined to hold all functions and operations on displaying
-        a colourful output *)
-  let bubble_color =
-    let open Types in
-    begin
-      function
-      | Fretted view_color -> view_color
-      | Plain view_color -> view_color
-      | Interline view_color -> view_color
-    end
-
-  let rotate_to_prev =
-    let open Types in
-    function
-    | Black ->    Lwhite
-    | Red ->      Lblack
-    | Green ->    Lred
-    | Yellow ->   Lgreen
-    | Blue ->     Lyellow
-    | Magenta ->  Blue
-    | Cyan ->     Magenta
-    | White ->    Cyan
-    | Lblack ->   White
-    | Lred ->     Lblack
-    | Lgreen ->   Lred
-    | Lyellow ->  Lgreen
-    | Lblue ->    Lyellow
-    | Lmagenta -> Lblue
-    | Lcyan ->    Lmagenta
-    | Lwhite ->   Lcyan
-
-  let rotate_to_next =
-    let open Types in
-    function
-    | Black ->   Lred
-    | Red ->     Lgreen
-    | Green ->   Lyellow
-    | Yellow ->  Blue
-    | Blue ->    Magenta
-    | Magenta -> Cyan
-    | Cyan ->    White
-    | White ->   Lblack
-    | Lblack ->  Lred
-    | Lred ->    Lgreen
-    | Lgreen ->  Lyellow
-    | Lyellow -> Lblue
-    | Lblue ->   Lmagenta
-    | Lmagenta-> Lcyan
-    | Lcyan ->   Lwhite
-    | Lwhite ->  Lblack
-
-  let event_to_color =
-    let open LTerm_style in
-    let open Types in
-    function
-    | Black -> black
-    | Red -> red
-    | Green -> green
-    | Yellow -> yellow
-    | Blue -> blue
-    | Magenta -> magenta
-    | Cyan -> cyan
-    | White -> white
-    | Lblack -> lblack
-    | Lred -> lred
-    | Lgreen -> lgreen
-    | Lyellow -> lyellow
-    | Lblue -> lblue
-    | Lmagenta -> lmagenta
-    | Lcyan -> lcyan
-    | Lwhite -> lwhite
-
-  let event_to_color_flat_view =
-    let open Types in
-    function
-    | Fretted event -> event_to_color event
-    | Plain event -> event_to_color event
-    | Interline event -> event_to_color event
-
-  let is_equal color colour : bool =
-    let open LTerm_style in
-    let s1 = {none with foreground = Some color} in
-    let s2 = {none with foreground = Some colour} in
-    LTerm_style.equal s1 s2
-
-  let find_color struc note =
-    let open Types in
-    match Hashtbl.find_opt struc.notes_to_degree_tbl note with
-    | None -> struc.color
-    | Some degree ->
-      Hashtbl.find struc.degree_to_color_tbl degree
-
-end
-
 module NOTES = struct
 
   module FMT = struct
@@ -233,6 +138,106 @@ module FRETBOARD = struct
         Format.asprintf {|%a%a%a|} NOTES.FMT.print_note note pp_sep () pp_sep ()
     end
 
+    module FRET = struct
+      let pp_space_fmt fmt () =
+        Format.fprintf fmt " "
+
+      module NUMBERS = struct
+
+        let pp_fret_nb_fmt fmt i =
+          Format.fprintf fmt "%2d" i
+
+        let pp_fret_fmt fmt n =
+          Format.fprintf fmt {|%a%a%a%a%a%a%a|}
+            pp_space_fmt ()
+            pp_fret_nb_fmt n
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+
+        let pp_last_fret_fmt fmt n =
+          Format.fprintf fmt {|%a%a%a%a%a%a%a|}
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_fret_nb_fmt n
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+
+        let pp_before fmt i =
+          if i < 0 then
+            Format.fprintf fmt "%a" pp_space_fmt ()
+          else
+            Format.fprintf fmt "%a%a" pp_space_fmt () pp_space_fmt ()
+
+        let pp_after fmt i =
+          if i = 0 then
+            Format.fprintf fmt "%a" pp_space_fmt ()
+          else if i < 11 then
+            Format.fprintf fmt {|%a%a%a%a%a|}
+              pp_space_fmt ()
+              pp_space_fmt ()
+              pp_space_fmt ()
+              pp_space_fmt ()
+              pp_space_fmt ()
+          else
+            Format.fprintf fmt {|%a%a%a%a|}
+              pp_space_fmt ()
+              pp_space_fmt ()
+              pp_space_fmt ()
+              pp_space_fmt ()
+
+        let pp_fret_0 () =
+          Format.asprintf {|%a0%a|} pp_space_fmt () pp_space_fmt ()
+
+        let pp_fret n =
+          Format.asprintf {|%a%a%a%a%a%a%a|}
+            pp_space_fmt ()
+            pp_fret_nb_fmt n
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+
+        let pp_last_fret n =
+          Format.asprintf {|%a%a%a%a%a%a%a|}
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_fret_nb_fmt n
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+            pp_space_fmt ()
+      end
+
+      let pp_sep_fmt fmt () =
+        Format.fprintf fmt "-"
+
+      let pp_bar_fmt fmt () =
+        Format.fprintf fmt "|"
+
+      let pp_before fmt (fret_nb, _note) =
+        if fret_nb = 0 then
+          Format.fprintf fmt "%a" pp_bar_fmt ()
+        else
+          Format.fprintf fmt {|%a%a%a|} pp_bar_fmt () pp_sep_fmt () pp_space_fmt ()
+
+      let pp_after fmt (fret_nb, note) =
+        if fret_nb = 0 then
+          ()
+        else
+          match Conv.note_to_int note with
+          | 1 | 4 | 6 | 9 | 11 ->
+            Format.fprintf fmt {|%a%a%a|}  pp_space_fmt () pp_sep_fmt () pp_bar_fmt ()
+          | _n ->
+            Format.fprintf fmt {|%a%a%a%a|} pp_space_fmt () pp_space_fmt () pp_sep_fmt () pp_bar_fmt ()
+
+    end
+
     (* ************************************** *)
     (*         display notes plainly          *)
     (* ************************************** *)
@@ -290,9 +295,12 @@ module FRETBOARD = struct
     (* ************************************** *)
 
     let print_top_numbers fmt (fret_nb, _note) =
-      if fret_nb = 0 then Format.fprintf fmt " 0 "
-      else if fret_nb < 10 then Format.fprintf fmt " %2d     " fret_nb
-      else Format.fprintf fmt "  %2d    " fret_nb
+      let s =
+        if fret_nb = 0 then FRET.NUMBERS.pp_fret_0 ()
+        else if fret_nb < 10 then FRET.NUMBERS.pp_fret fret_nb
+        else FRET.NUMBERS.pp_last_fret fret_nb
+      in
+      Format.fprintf fmt "%s" s
 
     let print_line_of_frets_numbers fmt (_string_nb, string) =
       iterate_over_string
@@ -348,5 +356,100 @@ module FRETBOARD = struct
     (* ************************************** *)
 
   end
+
+end
+
+module COLOR = struct
+  (** module COLOR is destined to hold all functions and operations on displaying
+        a colourful output *)
+  let bubble_color =
+    let open Types in
+    begin
+      function
+      | Fretted view_color -> view_color
+      | Plain view_color -> view_color
+      | Interline view_color -> view_color
+    end
+
+  let rotate_to_prev =
+    let open Types in
+    function
+    | Black ->    Lwhite
+    | Red ->      Lblack
+    | Green ->    Lred
+    | Yellow ->   Lgreen
+    | Blue ->     Lyellow
+    | Magenta ->  Blue
+    | Cyan ->     Magenta
+    | White ->    Cyan
+    | Lblack ->   White
+    | Lred ->     Lblack
+    | Lgreen ->   Lred
+    | Lyellow ->  Lgreen
+    | Lblue ->    Lyellow
+    | Lmagenta -> Lblue
+    | Lcyan ->    Lmagenta
+    | Lwhite ->   Lcyan
+
+  let rotate_to_next =
+    let open Types in
+    function
+    | Black ->   Lred
+    | Red ->     Lgreen
+    | Green ->   Lyellow
+    | Yellow ->  Blue
+    | Blue ->    Magenta
+    | Magenta -> Cyan
+    | Cyan ->    White
+    | White ->   Lblack
+    | Lblack ->  Lred
+    | Lred ->    Lgreen
+    | Lgreen ->  Lyellow
+    | Lyellow -> Lblue
+    | Lblue ->   Lmagenta
+    | Lmagenta-> Lcyan
+    | Lcyan ->   Lwhite
+    | Lwhite ->  Lblack
+
+  let event_to_color =
+    let open LTerm_style in
+    let open Types in
+    function
+    | Black -> black
+    | Red -> red
+    | Green -> green
+    | Yellow -> yellow
+    | Blue -> blue
+    | Magenta -> magenta
+    | Cyan -> cyan
+    | White -> white
+    | Lblack -> lblack
+    | Lred -> lred
+    | Lgreen -> lgreen
+    | Lyellow -> lyellow
+    | Lblue -> lblue
+    | Lmagenta -> lmagenta
+    | Lcyan -> lcyan
+    | Lwhite -> lwhite
+
+  let event_to_color_flat_view =
+    let open Types in
+    function
+    | Fretted event -> event_to_color event
+    | Plain event -> event_to_color event
+    | Interline event -> event_to_color event
+
+  let is_equal color colour : bool =
+    let open LTerm_style in
+    let s1 = {none with foreground = Some color} in
+    let s2 = {none with foreground = Some colour} in
+    LTerm_style.equal s1 s2
+
+  let find_color struc note =
+    let open Types in
+    match Hashtbl.find_opt struc.notes_to_degree_tbl note with
+    | None -> struc.color
+    | Some degree ->
+      Hashtbl.find struc.degree_to_color_tbl degree
 
 end
