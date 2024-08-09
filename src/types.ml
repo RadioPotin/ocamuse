@@ -100,7 +100,6 @@ type pattern_view_draw_struc =
     ctx : LTerm_draw.context;
     color : LTerm_style.color;
     fretboard : (note array) array;
-    guitar_string : (note array) ref;
     notes_to_degree_tbl: (note, int) Hashtbl.t;
     degree_to_color_tbl: (int, LTerm_style.color) Hashtbl.t;
   }

@@ -10,10 +10,10 @@ let writerate (struc: Types.pattern_view_draw_struc) style string =
 let writerate_for_frets (struc: Types.pattern_view_draw_struc) style string =
   String.iteri (fun i c ->
     let j = !(struc.cursor_j) + !(struc.offset) in
-    let i = !(struc.cursor_i) + i + !(struc.offset) in
+    let off = !(struc.cursor_i) + !(struc.offset) in
     LTerm_draw.draw_char struc.ctx
       (j - 1)
-      i
+      ((i + off) - 1)
       (Zed_char.unsafe_of_char c)
       ~style
   ) string
@@ -99,7 +99,7 @@ let write_fret_number (struc : Types.pattern_view_draw_struc) fret_i =
     {
       none with
       bold = Some true;
-      foreground = Some (LTerm_style.lblack)
+      foreground = Some (struc.color)
     }
   in
   writerate_for_frets struc style fret_nb_string;

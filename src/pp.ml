@@ -141,6 +141,8 @@ module FRETBOARD = struct
     module FRET = struct
       let pp_space_fmt fmt () =
         Format.fprintf fmt " "
+      let pp_bar_fmt fmt () =
+        Format.fprintf fmt "|"
 
       module NUMBERS = struct
 
@@ -168,7 +170,9 @@ module FRETBOARD = struct
             pp_space_fmt ()
 
         let pp_before fmt i =
-          if i < 0 then
+          if i = 0 then
+            Format.fprintf fmt "%a" pp_space_fmt ()
+          else if i < 10 then
             Format.fprintf fmt "%a" pp_space_fmt ()
           else
             Format.fprintf fmt "%a%a" pp_space_fmt () pp_space_fmt ()
@@ -176,7 +180,7 @@ module FRETBOARD = struct
         let pp_after fmt i =
           if i = 0 then
             Format.fprintf fmt "%a" pp_space_fmt ()
-          else if i < 11 then
+          else if i < 10 then
             Format.fprintf fmt {|%a%a%a%a%a|}
               pp_space_fmt ()
               pp_space_fmt ()
@@ -216,9 +220,6 @@ module FRETBOARD = struct
 
       let pp_sep_fmt fmt () =
         Format.fprintf fmt "-"
-
-      let pp_bar_fmt fmt () =
-        Format.fprintf fmt "|"
 
       let pp_before fmt (fret_nb, _note) =
         if fret_nb = 0 then

@@ -115,7 +115,6 @@ let view_pattern ctx view ocamuse_context mode =
       number_of_strings;
       notes_to_degree_tbl;
       degree_to_color_tbl;
-      guitar_string = ref fretboard.(0);
     }
   in
   begin
