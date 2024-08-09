@@ -182,7 +182,7 @@ let select_pattern_view_display_mode size ctx ocamuse_context (view, mode) =
     let open LTerm_geom in
     let position =
       {
-        row1 = 19;
+        row1 = 16;
         col1 = 42;
         row2 = size.rows - 1;
         col2 = size.cols - 1;

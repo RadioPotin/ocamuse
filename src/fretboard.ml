@@ -21,18 +21,18 @@ let get_next_fret_note open_string fret =
   let note_id = Conv.note_to_int open_string + fret in
   Conv.int_to_note Sharp note_id
 
-let coord_to_note_tbl = Hashtbl.create 512
+let coord_to_note_tbl = ref @@ Hashtbl.create 512
 
 let register nb_s range open_note =
   let note = ref open_note in
   for fret_number = 0 to range - 1 do
-    Hashtbl.replace coord_to_note_tbl (fret_number, nb_s) !note;
+    Hashtbl.replace !coord_to_note_tbl (fret_number, nb_s) !note;
     note := get_next_fret_note open_note fret_number
   done
 
 let map nb_s range open_note =
   Array.init (range - 1) (fun i ->
-    match Hashtbl.find_opt coord_to_note_tbl (i + 1, nb_s) with
+    match Hashtbl.find_opt !coord_to_note_tbl (i + 1, nb_s) with
     | None -> open_note
     | Some note -> note )
 
@@ -54,3 +54,26 @@ let init =
       (fun guitar_str_nb open_string ->
           init_string guitar_str_nb range open_string )
       tuning
+
+let scan_column_for_alterations (fret_nb, _string_nb) =
+  let is_in_bound k =
+    match Hashtbl.find_opt !coord_to_note_tbl k with
+    | None -> false
+    | Some _note -> true
+  in
+  let set_alteration_flag flag key =
+    let note =
+      Hashtbl.find !coord_to_note_tbl key
+    in
+    flag := (note.alteration <> 0 || not !flag)
+
+  in
+  let string_nb = ref 1 in
+  let alteration_detected = ref false in
+  let key = ref (fret_nb, !string_nb) in
+  while is_in_bound !key && not !alteration_detected do
+    set_alteration_flag alteration_detected !key;
+    string_nb := !string_nb + 1;
+    key := (fret_nb, !string_nb)
+  done;
+  !alteration_detected

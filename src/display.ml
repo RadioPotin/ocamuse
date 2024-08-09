@@ -252,20 +252,6 @@ module MATRIX = struct
             ~style
         ) string
 
-      let write_head struc _j _i =
-        writerate struc
-          (LTerm_style.({
-              none with
-              foreground = Some (LTerm_style.lwhite)
-            })) "|" ; "|"
-
-      let write_separator struc _j _i =
-        writerate struc
-          (LTerm_style.({
-              none with
-              foreground = Some (LTerm_style.lwhite)
-            })) "-" ; "-"
-
       let write_note (struc : Types.pattern_view_draw_struc) j i =
         let note = struc.fretboard.(j).(i) in
         let note_string =
@@ -282,41 +268,75 @@ module MATRIX = struct
         in
         writerate struc style note_string ; note_string
 
+      let write_plane_spacing (struc : Types.pattern_view_draw_struc) j i =
+        let should_space =
+          Fretboard.scan_column_for_alterations (i, j)
+        in
+        let module M = Pp.FRETBOARD.FMT in
+        let note = struc.fretboard.(j).(i) in
+        let note_int = Conv.note_to_int note in
+        let spacing =
+          if i = 0 then begin
+            match note_int with
+            | 1 | 4 | 6 | 9 | 11 ->
+              M.stringify M.PLAIN.pp_fret ()
+            | _ ->
+              M.stringify M.PLAIN.pp_space () ^
+                M.stringify M.PLAIN.pp_fret ()
+          end
+          else if i < 10 then begin
+            match note_int with
+            | 1 | 4 | 6 | 9 | 11 ->
+              M.stringify M.PLAIN.pp_sep ()
+            | _ ->
+              if should_space then
+                M.stringify M.PLAIN.pp_sep () ^
+                  M.stringify M.PLAIN.pp_sep ()
+              else
+                M.stringify M.PLAIN.pp_sep ()
+          end
+          else begin
+            match note_int with
+            | 1 | 4 | 6 | 9 | 11 ->
+              M.stringify M.PLAIN.pp_fret ()
+            | _ ->
+              M.stringify M.PLAIN.pp_sep ()
+          end
+        in
+        writerate struc (LTerm_style.({
+          none with
+          foreground = Some (LTerm_style.lblack)
+        })) spacing;
+        spacing
+
       let write_plain_note (struc : Types.pattern_view_draw_struc) fret_j fret_i  =
         let open Types in
         let update_cursor struc cell =
           let length = String.length cell in
           struc.cursor_i := (!(struc.cursor_i) + length)
         in
-        if !fret_i = 0 then begin
-          update_cursor struc @@ write_head struc !fret_j !fret_i;
-          update_cursor struc @@ write_note struc !fret_j !fret_i;
-          update_cursor struc @@ write_head struc !fret_j !fret_i
-        end
-        else begin
-          update_cursor struc @@ write_note struc !fret_j !fret_i;
-          update_cursor struc @@ write_separator struc !fret_j !fret_i
-        end
-
-      let write_pattern (struc : Types.pattern_view_draw_struc) =
-        let update_field field i = field := i in
-        match struc.view with
-        | Plain _ ->
-          let j = ref 0 in
-          let i = ref 0 in
-          while !j < struc.number_of_strings do
-            i := 0;
-            update_field struc.cursor_j !j;
-            update_field struc.cursor_i !i;
-            while !i < struc.number_of_frets do
-              write_plain_note struc j i;
-              i := !i + 1
-            done;
-            j := !j + 1
-          done;
-        | _ -> assert false
-
+        update_cursor struc @@ write_note struc !fret_j !fret_i;
+        update_cursor struc @@ write_plane_spacing struc !fret_j !fret_i
     end
+
+    let write_pattern (struc : Types.pattern_view_draw_struc) =
+      let update_field field i = field := i in
+      match struc.view with
+      | Plain _ ->
+        let j = ref 0 in
+        let i = ref 0 in
+        while !j < struc.number_of_strings do
+          i := 0;
+          update_field struc.cursor_j !j;
+          update_field struc.cursor_i !i;
+          while !i < struc.number_of_frets do
+            CELL.write_plain_note struc j i;
+            i := !i + 1
+          done;
+          j := !j + 1
+        done;
+      | _ -> assert false
+
 
     (* This module will hold all functions that aim to build and highlight a
        given pattern on the fretboard *)
@@ -371,9 +391,8 @@ module MATRIX = struct
             degree_to_colour_tbl
             ocamuse_context
         in
-        CELL.write_pattern struc
+        write_pattern struc
       end
 
   end
-
 end
