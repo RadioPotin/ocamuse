@@ -1,87 +1,3 @@
-module COLOR = struct
-  (** module COLOR is destined to hold all functions and operations on displaying
-        a colourful output *)
-
-  let bubble_color =
-    let open Types in
-    begin
-      function
-      | Fretted view_color -> view_color
-      | Plain view_color -> view_color
-      | Interline view_color -> view_color
-    end
-
-  let rotate_to_prev =
-    let open Types in
-    function
-    | Black ->    Lwhite
-    | Red ->      Lblack
-    | Green ->    Lred
-    | Yellow ->   Lgreen
-    | Blue ->     Lyellow
-    | Magenta ->  Blue
-    | Cyan ->     Magenta
-    | White ->    Cyan
-    | Lblack ->   White
-    | Lred ->     Lblack
-    | Lgreen ->   Lred
-    | Lyellow ->  Lgreen
-    | Lblue ->    Lyellow
-    | Lmagenta -> Lblue
-    | Lcyan ->    Lmagenta
-    | Lwhite ->   Lcyan
-
-  let rotate_to_next =
-    let open Types in
-    function
-    | Black ->   Lred
-    | Red ->     Lgreen
-    | Green ->   Lyellow
-    | Yellow ->  Blue
-    | Blue ->    Magenta
-    | Magenta -> Cyan
-    | Cyan ->    White
-    | White ->   Lblack
-    | Lblack ->  Lred
-    | Lred ->    Lgreen
-    | Lgreen ->  Lyellow
-    | Lyellow -> Lblue
-    | Lblue ->   Lmagenta
-    | Lmagenta-> Lcyan
-    | Lcyan ->   Lwhite
-    | Lwhite ->  Lblack
-
-  let event_to_color =
-    let open LTerm_style in
-    let open Types in
-    function
-    | Black -> black
-    | Red -> red
-    | Green -> green
-    | Yellow -> yellow
-    | Blue -> blue
-    | Magenta -> magenta
-    | Cyan -> cyan
-    | White -> white
-    | Lblack -> lblack
-    | Lred -> lred
-    | Lgreen -> lgreen
-    | Lyellow -> lyellow
-    | Lblue -> lblue
-    | Lmagenta -> lmagenta
-    | Lcyan -> lcyan
-    | Lwhite -> lwhite
-
-  let event_to_color_flat_view =
-    let open Types in
-    function
-    | Fretted event -> event_to_color event
-    | Plain event -> event_to_color event
-    | Interline event -> event_to_color event
-
-end
-
-
 module MATRIX = struct
   open Types
   module DRAW = struct
@@ -238,10 +154,10 @@ module MATRIX = struct
 
       let make_color struc note =
         match Hashtbl.find_opt struc.notes_to_degree_tbl note with
-        | None -> struc.color
+        | None -> Pp.COLOR.event_to_color @@ struc.color
         | Some degree ->
           Hashtbl.find struc.degree_to_color_tbl degree
-          |> COLOR.event_to_color
+
 
       let writerate struc style string =
         String.iteri (fun i c ->
@@ -253,18 +169,34 @@ module MATRIX = struct
         ) string
 
       let write_note (struc : Types.pattern_view_draw_struc) j i =
+        let open Types in
+        let open LTerm_style in
         let note = struc.fretboard.(j).(i) in
         let note_string =
           Pp.FRETBOARD.FMT.stringify
             Pp.NOTES.FMT.print_note
             note
         in
-        let style =
-          LTerm_style.({
+        let note_color = make_color struc note in
+        let s = { none with foreground = Some note_color } in
+        let default =
+          {
             none with
-            bold = Some true;
-            foreground = Some (make_color struc note)
-          })
+            foreground = Some (Pp.COLOR.event_to_color struc.color)
+          }
+        in
+        let style =
+          if LTerm_style.equal s default then
+            LTerm_style.({
+              none with
+              foreground = Some default
+            })
+          else
+            LTerm_style.({
+              none with
+              bold = Some true;
+              foreground = Some (note_color)
+            })
         in
         writerate struc style note_string ; note_string
 
@@ -305,7 +237,7 @@ module MATRIX = struct
         in
         writerate struc (LTerm_style.({
           none with
-          foreground = Some (LTerm_style.lblack)
+          foreground = Some (Pp.COLOR.event_to_color struc.color)
         })) spacing;
         spacing
 
@@ -357,7 +289,7 @@ module MATRIX = struct
         let fretboard = ocamuse_context.fretboard in
         let offset = ref offset_for_frets_numbers in
         let number_of_strings = Array.length ocamuse_context.fretboard in
-        let color = COLOR.event_to_color !(ocamuse_context.base_colour) in
+        let color = !(ocamuse_context.base_colour) in
         let number_of_frets = Array.length ocamuse_context.fretboard.(0) in
         {
           ctx;

@@ -98,11 +98,11 @@ type pattern_view_draw_struc =
     number_of_frets: int;
     number_of_strings: int;
     ctx : LTerm_draw.context;
-    color : LTerm_style.color;
+    color : color_plain_view_event;
     fretboard : (note array) array;
     guitar_string : (note array) ref;
     notes_to_degree_tbl: (note, int) Hashtbl.t;
-    degree_to_color_tbl: (int, color_plain_view_event) Hashtbl.t;
+    degree_to_color_tbl: (int, LTerm_style.color) Hashtbl.t;
   }
 
 type ocamuse_structure =

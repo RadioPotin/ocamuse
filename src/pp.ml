@@ -1,3 +1,84 @@
+module COLOR = struct
+  (** module COLOR is destined to hold all functions and operations on displaying
+        a colourful output *)
+  let bubble_color =
+    let open Types in
+    begin
+      function
+      | Fretted view_color -> view_color
+      | Plain view_color -> view_color
+      | Interline view_color -> view_color
+    end
+
+  let rotate_to_prev =
+    let open Types in
+    function
+    | Black ->    Lwhite
+    | Red ->      Lblack
+    | Green ->    Lred
+    | Yellow ->   Lgreen
+    | Blue ->     Lyellow
+    | Magenta ->  Blue
+    | Cyan ->     Magenta
+    | White ->    Cyan
+    | Lblack ->   White
+    | Lred ->     Lblack
+    | Lgreen ->   Lred
+    | Lyellow ->  Lgreen
+    | Lblue ->    Lyellow
+    | Lmagenta -> Lblue
+    | Lcyan ->    Lmagenta
+    | Lwhite ->   Lcyan
+
+  let rotate_to_next =
+    let open Types in
+    function
+    | Black ->   Lred
+    | Red ->     Lgreen
+    | Green ->   Lyellow
+    | Yellow ->  Blue
+    | Blue ->    Magenta
+    | Magenta -> Cyan
+    | Cyan ->    White
+    | White ->   Lblack
+    | Lblack ->  Lred
+    | Lred ->    Lgreen
+    | Lgreen ->  Lyellow
+    | Lyellow -> Lblue
+    | Lblue ->   Lmagenta
+    | Lmagenta-> Lcyan
+    | Lcyan ->   Lwhite
+    | Lwhite ->  Lblack
+
+  let event_to_color =
+    let open LTerm_style in
+    let open Types in
+    function
+    | Black -> black
+    | Red -> red
+    | Green -> green
+    | Yellow -> yellow
+    | Blue -> blue
+    | Magenta -> magenta
+    | Cyan -> cyan
+    | White -> white
+    | Lblack -> lblack
+    | Lred -> lred
+    | Lgreen -> lgreen
+    | Lyellow -> lyellow
+    | Lblue -> lblue
+    | Lmagenta -> lmagenta
+    | Lcyan -> lcyan
+    | Lwhite -> lwhite
+
+  let event_to_color_flat_view =
+    let open Types in
+    function
+    | Fretted event -> event_to_color event
+    | Plain event -> event_to_color event
+    | Interline event -> event_to_color event
+end
+
 module NOTES = struct
 
   module FMT = struct

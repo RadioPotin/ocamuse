@@ -86,7 +86,9 @@ let build_degree_colour_tbl mode =
   let degree_colour_tbl = Hashtbl.create 512 in
   List.iteri
     (fun i _note ->
-        Hashtbl.add degree_colour_tbl (i + 1) (Conv.degree_to_colour (i + 1)))
+        let color = Conv.degree_to_colour (i + 1) in
+        let color = Pp.COLOR.event_to_color color in
+        Hashtbl.add degree_colour_tbl (i + 1) color)
     mode;
   degree_colour_tbl
 
