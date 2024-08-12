@@ -71,45 +71,6 @@ module NOTES = struct
 end
 
 module FRETBOARD = struct
-
-  (* ************************************** *)
-  (** plain fretboard print iteri functions *)
-  (* ************************************** *)
-
-  let fret_print_iteri ~pp_sep ppf pp_v arr range =
-    Array.iteri
-      (fun i v ->
-          Format.fprintf ppf "%d" (i + 1);
-          pp_v ppf (i, v);
-          if i < range - 1 then pp_sep i ppf () )
-      arr
-
-  let iterate_over_plain_string ~pp_sep fmt ppv arr =
-    let range = Array.length arr in
-    fret_print_iteri ~pp_sep fmt ppv arr range
-
-  let plain_matrix_iteri ~pp_sep fmt ppv arr =
-    iterate_over_plain_string ~pp_sep fmt ppv arr
-
-  (* **************************************** *)
-  (** Fretted fretboard print iteri functions *)
-  (* **************************************** *)
-
-  let fret_print_iteri ~pp_sep ppf pp_v arr range =
-    Array.iteri
-      (fun i v ->
-          pp_v ppf (i, v);
-          if i < range - 1 then pp_sep i ppf ()
-      )
-      arr
-
-  let iterate_over_string ~pp_sep fmt ppv arr =
-    let range = Array.length arr in
-    fret_print_iteri ~pp_sep fmt ppv arr range
-
-  let fret_matrix_iteri ~pp_sep fmt ppv arr =
-    iterate_over_string ~pp_sep fmt ppv arr
-
   module FMT = struct
 
     (* ************************************** *)
@@ -143,9 +104,26 @@ module FRETBOARD = struct
         Format.fprintf fmt " "
       let pp_bar_fmt fmt () =
         Format.fprintf fmt "|"
+      let pp_sep_fmt fmt () =
+        Format.fprintf fmt "-"
+
+      let pp_before fmt (fret_nb, _note) =
+        if fret_nb = 0 then
+          Format.fprintf fmt "%a" pp_bar_fmt ()
+        else
+          Format.fprintf fmt {|%a%a%a|} pp_bar_fmt () pp_sep_fmt () pp_space_fmt ()
+
+      let pp_after fmt (fret_nb, note) =
+        if fret_nb = 0 then
+          ()
+        else
+          match Conv.note_to_int note with
+          | 1 | 4 | 6 | 9 | 11 ->
+            Format.fprintf fmt {|%a%a%a|}  pp_space_fmt () pp_sep_fmt () pp_bar_fmt ()
+          | _n ->
+            Format.fprintf fmt {|%a%a%a%a|} pp_space_fmt () pp_space_fmt () pp_sep_fmt () pp_bar_fmt ()
 
       module NUMBERS = struct
-
         let pp_fret_nb_fmt fmt i =
           Format.fprintf fmt "%2d" i
 
@@ -218,26 +196,64 @@ module FRETBOARD = struct
             pp_space_fmt ()
       end
 
-      let pp_sep_fmt fmt () =
-        Format.fprintf fmt "-"
-
-      let pp_before fmt (fret_nb, _note) =
-        if fret_nb = 0 then
-          Format.fprintf fmt "%a" pp_bar_fmt ()
-        else
-          Format.fprintf fmt {|%a%a%a|} pp_bar_fmt () pp_sep_fmt () pp_space_fmt ()
-
-      let pp_after fmt (fret_nb, note) =
-        if fret_nb = 0 then
-          ()
-        else
-          match Conv.note_to_int note with
-          | 1 | 4 | 6 | 9 | 11 ->
-            Format.fprintf fmt {|%a%a%a|}  pp_space_fmt () pp_sep_fmt () pp_bar_fmt ()
-          | _n ->
-            Format.fprintf fmt {|%a%a%a%a|} pp_space_fmt () pp_space_fmt () pp_sep_fmt () pp_bar_fmt ()
-
     end
+
+    module INTERLINE = struct
+      let pp_box fmt fret_nb =
+        if fret_nb = 0 then begin
+          Format.fprintf fmt {|%a%a|} FRET.pp_bar_fmt () FRET.pp_space_fmt ()
+        end;
+        if fret_nb < 11 then
+          Format.fprintf fmt {|%a%a%a%a%a%a%a%a|}
+            FRET.pp_bar_fmt ()
+            FRET.pp_space_fmt ()
+            FRET.pp_space_fmt ()
+            FRET.pp_space_fmt ()
+            FRET.pp_space_fmt ()
+            FRET.pp_space_fmt ()
+            FRET.pp_space_fmt ()
+            FRET.pp_bar_fmt ()
+        else ()
+    end
+
+    (* ************************************** *)
+    (** plain fretboard print iteri functions *)
+    (* ************************************** *)
+
+    let fret_print_iteri ~pp_sep ppf pp_v arr range =
+      Array.iteri
+        (fun i v ->
+            Format.fprintf ppf "%d" (i + 1);
+            pp_v ppf (i, v);
+            if i < range - 1 then pp_sep i ppf () )
+        arr
+
+    let iterate_over_plain_string ~pp_sep fmt ppv arr =
+      let range = Array.length arr in
+      fret_print_iteri ~pp_sep fmt ppv arr range
+
+    let plain_matrix_iteri ~pp_sep fmt ppv arr =
+      iterate_over_plain_string ~pp_sep fmt ppv arr
+
+    (* **************************************** *)
+    (** Fretted fretboard print iteri functions *)
+    (* **************************************** *)
+
+    let fret_print_iteri ~pp_sep ppf pp_v arr range =
+      Array.iteri
+        (fun i v ->
+            pp_v ppf (i, v);
+            if i < range - 1 then pp_sep i ppf ()
+        )
+        arr
+
+    let iterate_over_string ~pp_sep fmt ppv arr =
+      let range = Array.length arr in
+      fret_print_iteri ~pp_sep fmt ppv arr range
+
+    let fret_matrix_iteri ~pp_sep fmt ppv arr =
+      iterate_over_string ~pp_sep fmt ppv arr
+
 
     (* ************************************** *)
     (*         display notes plainly          *)

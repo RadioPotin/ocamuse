@@ -148,6 +148,24 @@ let write_fret_numbers (struc : Types.pattern_view_draw_struc) =
     i := !i + 1;
   done
 
+
+module PLAIN = struct
+  let view (struc : Types.pattern_view_draw_struc) =
+    let update_field field i = field := i in
+    let j = ref 0 in
+    let i = ref 0 in
+    while !j < struc.number_of_strings do
+      i := 0;
+      update_field struc.cursor_j !j;
+      update_field struc.cursor_i !i;
+      while !i < struc.number_of_frets do
+        write_plain_note struc j i;
+        i := !i + 1
+      done;
+      j := !j + 1
+    done
+end
+
 let write_fretted_note (struc : Types.pattern_view_draw_struc) fret_j fret_i  =
   let open LTerm_style in
   let module M = Pp.FRETBOARD.FMT in
@@ -187,24 +205,9 @@ let write_fretted_note (struc : Types.pattern_view_draw_struc) fret_j fret_i  =
   update_cursor struc @@ write_note struc !fret_j !fret_i;
   update_cursor struc @@ after_note struc !fret_i
 
-let write_pattern (struc : Types.pattern_view_draw_struc) =
-  let update_field field i = field := i in
-  match struc.view with
-  | Plain _ ->
-    let j = ref 0 in
-    let i = ref 0 in
-    while !j < struc.number_of_strings do
-      i := 0;
-      update_field struc.cursor_j !j;
-      update_field struc.cursor_i !i;
-      while !i < struc.number_of_frets do
-        write_plain_note struc j i;
-        i := !i + 1
-      done;
-      j := !j + 1
-    done
-  | Fretted _ ->
-
+module FRETTED = struct
+  let view (struc : Types.pattern_view_draw_struc) =
+    let update_field field i = field := i in
     let j = ref 0 in
     let i = ref 0 in
     write_fret_numbers struc;
@@ -218,4 +221,55 @@ let write_pattern (struc : Types.pattern_view_draw_struc) =
       done;
       j := !j + 1
     done
-  | Interline _ -> assert false
+end
+
+let write_interline (struc : Types.pattern_view_draw_struc) fret_j fret_i  =
+  let open LTerm_style in
+  let module M = Pp.FRETBOARD.FMT in
+  let write_box (struc: Types.pattern_view_draw_struc) _fret_j fret_i =
+    let after_spacing =
+      M.stringify M.INTERLINE.pp_box fret_i
+    in
+    let style =
+      {
+        none with
+        foreground = Some (struc.color)
+      }
+    in
+    writerate struc style after_spacing;
+    after_spacing
+  in
+  let update_cursor (struc: Types.pattern_view_draw_struc) cell =
+    let length = String.length cell in
+    struc.cursor_i := (!(struc.cursor_i) + length)
+  in
+  let i = ref 0 in
+  while !i < struc.number_of_frets do
+    update_cursor struc @@ write_box struc !fret_j !fret_i;
+    i := !i + 1
+  done
+
+module INTERLINE = struct
+  let view (struc : Types.pattern_view_draw_struc) =
+    let update_field field i = field := i in
+    let j = ref 0 in
+    let i = ref 0 in
+    write_fret_numbers struc;
+    while !j < struc.number_of_strings do
+      i := 0;
+      update_field struc.cursor_j !j;
+      update_field struc.cursor_i !i;
+      while !i < struc.number_of_frets do
+        write_fretted_note struc j i;
+        i := !i + 1
+      done;
+      write_interline struc j i;
+      j := !j + 1
+    done
+end
+
+let write_pattern (struc : Types.pattern_view_draw_struc) =
+  match struc.view with
+  | Plain _ -> PLAIN.view struc
+  | Fretted _ -> FRETTED.view struc
+  | Interline _ -> INTERLINE.view struc
