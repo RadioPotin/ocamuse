@@ -38,12 +38,7 @@ let view_rows_with_interlines ctx fretboard color =
   (* interline *)
   Draw_line.write_interline struc;
   move_cursor struc;
-  (* iterate over rest of strings *)
-  Draw_line.write_frets struc;
-  move_cursor struc;
-  Draw_line.write_interline struc;
-  move_cursor struc;
-  let i = ref 1 in
+  let i = ref 0 in
   while !i < struc.number_of_strings do
     update_field struc.guitar_string struc.fretboard.(!i);
     (* frets and notes *)
@@ -80,8 +75,6 @@ let view_rows_with_no_interline ctx fretboard color =
       (eval [B_fg struc.color; S string_line; E_fg]);
   ) struc.fretboard
 
-(* This module will hold all functions that aim to build and highlight a
-   given pattern on the fretboard *)
 let view_pattern ctx view ocamuse_context mode =
   let open Types in
   let make_pattern_struc

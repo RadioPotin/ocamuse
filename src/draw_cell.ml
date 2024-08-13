@@ -18,6 +18,17 @@ let writerate_for_frets (struc: Types.pattern_view_draw_struc) style string =
       ~style
   ) string
 
+let writerate_for_interlines (struc: Types.pattern_view_draw_struc) style string =
+  String.iteri (fun i c ->
+    let j = !(struc.cursor_j) + !(struc.offset) in
+    let off = !(struc.cursor_i) + !(struc.offset) + i in
+    LTerm_draw.draw_char struc.ctx
+      j
+      off
+      (Zed_char.unsafe_of_char c)
+      ~style
+  ) string
+
 let write_note (struc : Types.pattern_view_draw_struc) j i =
   let open LTerm_style in
   let note = struc.fretboard.(j).(i) in
@@ -236,35 +247,49 @@ let write_interline (struc : Types.pattern_view_draw_struc) fret_j fret_i  =
         foreground = Some (struc.color)
       }
     in
-    writerate struc style after_spacing;
+    writerate_for_interlines struc style after_spacing;
     after_spacing
   in
   let update_cursor (struc: Types.pattern_view_draw_struc) cell =
     let length = String.length cell in
     struc.cursor_i := (!(struc.cursor_i) + length)
   in
-  let i = ref 0 in
-  while !i < struc.number_of_frets do
-    update_cursor struc @@ write_box struc !fret_j !fret_i;
-    i := !i + 1
-  done
+  update_cursor struc @@ write_box struc !fret_j !fret_i;
 
 module INTERLINE = struct
   let view (struc : Types.pattern_view_draw_struc) =
     let update_field field i = field := i in
+    let move_cursor_j (struc : Types.pattern_view_draw_struc) =
+      update_field struc.cursor_j (!(struc.cursor_j) + 1)
+    in
     let j = ref 0 in
     let i = ref 0 in
     write_fret_numbers struc;
     while !j < struc.number_of_strings do
+
       i := 0;
-      update_field struc.cursor_j !j;
-      update_field struc.cursor_i !i;
+      update_field struc.cursor_i 0;
+      while !i < struc.number_of_frets do
+        write_interline struc j i;
+        i := !i + 1
+      done;
+      move_cursor_j struc;
+
+      i := 0;
+      update_field struc.cursor_i 0;
       while !i < struc.number_of_frets do
         write_fretted_note struc j i;
         i := !i + 1
       done;
-      write_interline struc j i;
+      move_cursor_j struc;
       j := !j + 1
+
+    done;
+    i := 0;
+    update_field struc.cursor_i 0;
+    while !i < struc.number_of_frets do
+      write_interline struc j i;
+      i := !i + 1
     done
 end
 
