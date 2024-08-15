@@ -110,7 +110,7 @@ let write_fret_number (struc : Types.pattern_view_draw_struc) fret_i =
     {
       none with
       bold = Some true;
-      foreground = Some (struc.color)
+      foreground = Some lwhite
     }
   in
   writerate_for_frets struc style fret_nb_string;

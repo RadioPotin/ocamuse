@@ -148,6 +148,18 @@ let select_full_view_display_mode size ctx ocamuse_context event =
   | Fretted _ ->
     Display.view_rows_with_no_interline sub_ctx ocamuse_context.fretboard color
   | Interline _ ->
+    let sub_ctx =
+      let offset_of_sub_context = 15 in
+      let position =
+        {
+          row1 = 18;
+          col1 = offset_of_sub_context;
+          row2 = size.rows - 1;
+          col2 = size.cols - 1;
+        }
+      in
+      LTerm_draw.sub ctx position
+    in
     Display.view_rows_with_interlines sub_ctx ocamuse_context.fretboard color
   | Plain _ ->
     let open LTerm_geom in
@@ -235,7 +247,8 @@ let main () =
 
     let default_context () =
       let open Types in
-      let display_mode = ref (Flat (Plain White)) in
+      let base_colour = Pp.COLOR.random_base_colour () in
+      let display_mode = ref (Flat (Plain base_colour)) in
       let fretboard =
         let default_tuning () : Types.tuning =
           List.map
@@ -247,11 +260,10 @@ let main () =
           ~tuning:(Option.value tuning ~default:(default_tuning ()))
           ~range:13 ()
       in
-      let base_colour = ref Lblack in
       {
         display_mode;
         fretboard;
-        base_colour;
+        base_colour = ref base_colour;
       }
     in
     let ocamuse_structure = default_context () in

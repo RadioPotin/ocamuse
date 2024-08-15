@@ -92,7 +92,7 @@ let view_pattern ctx view ocamuse_context mode =
     let fretboard = ocamuse_context.fretboard in
     let offset = ref offset_for_frets_numbers in
     let number_of_strings = Array.length ocamuse_context.fretboard in
-    let color = Pp.COLOR.event_to_color !(ocamuse_context.base_colour) in
+    let color = Pp.COLOR.event_to_base_color !(ocamuse_context.base_colour) in
     let number_of_frets = Array.length ocamuse_context.fretboard.(0) in
     {
       ctx;

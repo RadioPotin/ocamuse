@@ -101,7 +101,7 @@ let degree_to_colour =
   let open Types in
   function
   | 0 -> Lred
-  | 1 -> Lwhite
+  | 1 -> Blue
   | 2 -> Lgreen
   | 3 -> Lblue
   | 4 -> Lyellow
