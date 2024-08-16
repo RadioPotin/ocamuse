@@ -23,7 +23,7 @@ let rec loop ui ocamuse_context =
   begin
     match !(ocamuse_context.display_mode) with
     | Flat mode ->
-      let color = Pp.COLOR.bubble_color mode in
+      let color = Color.bubble_color mode in
       begin
         LTerm_ui.wait ui >>= function
         | LTerm_event.Key{ code = Up; _ } ->
@@ -48,14 +48,14 @@ let rec loop ui ocamuse_context =
         | LTerm_event.Key{ code = Prev_page; _ } ->
           (* blue fretboard *)
           ocamuse_context.display_mode
-          := Flat ( update_color Pp.COLOR.rotate_to_prev mode);
+          := Flat ( update_color Color.rotate_to_prev mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
         | LTerm_event.Key{ code = Next_page; _ } ->
           (* green fretboard *)
           ocamuse_context.display_mode
-          := Flat ( update_color Pp.COLOR.rotate_to_next mode);
+          := Flat ( update_color Color.rotate_to_next mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
@@ -71,7 +71,7 @@ let rec loop ui ocamuse_context =
       end
     | Pattern (view, mode) ->
       begin
-        let color = Pp.COLOR.bubble_color view in
+        let color = Color.bubble_color view in
         ocamuse_context.base_colour := color;
         LTerm_ui.wait ui >>= function
 
@@ -99,14 +99,14 @@ let rec loop ui ocamuse_context =
         | LTerm_event.Key{ code = Prev_page; _ } ->
           (* blue fretboard *)
           ocamuse_context.display_mode
-          := Pattern ( update_color Pp.COLOR.rotate_to_prev view, mode);
+          := Pattern ( update_color Color.rotate_to_prev view, mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
         | LTerm_event.Key{ code = Next_page; _ } ->
           (* green fretboard *)
           ocamuse_context.display_mode
-          := Pattern ( update_color Pp.COLOR.rotate_to_next view, mode);
+          := Pattern ( update_color Color.rotate_to_next view, mode);
           LTerm_ui.draw ui;
           loop ui ocamuse_context
 
@@ -131,7 +131,7 @@ let rec loop ui ocamuse_context =
 let select_full_view_display_mode size ctx ocamuse_context event =
   let open LTerm_geom in
   let open Types in
-  let color = Pp.COLOR.event_to_color_flat_view event in
+  let color = Color.event_to_color_flat_view event in
   let sub_ctx =
     let offset_of_sub_context = 15 in
     let position =
@@ -247,7 +247,7 @@ let main () =
 
     let default_context () =
       let open Types in
-      let base_colour = Pp.COLOR.random_base_colour () in
+      let base_colour = Color.random_base_colour () in
       let display_mode = ref (Flat (Plain base_colour)) in
       let fretboard =
         let default_tuning () : Types.tuning =
