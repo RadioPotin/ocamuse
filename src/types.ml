@@ -111,4 +111,7 @@ type ocamuse_structure =
     display_mode : display ref;
     fretboard : (note array) array;
     base_colour : base_colour ref;
+    tuning : tuning;
+    root_note : note;
+    mode : mode;
   }
