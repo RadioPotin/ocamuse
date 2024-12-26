@@ -1,7 +1,7 @@
 (executable
- (name main)
+ (public_name ocamuse)
  (libraries lambda-term lwt lwt.unix zed)
- (modules ocamuse types conv fretboard color pp draw display main))
+ (modules color conv display draw fretboard ocamuse pp theory types))
 
 (env
  (dev
