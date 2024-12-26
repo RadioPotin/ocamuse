@@ -102,7 +102,7 @@ let is_diatonic struc note =
     * suite d'accords d'une tonalité donnée  [x]
     * Fretboard print                        [x]
       * build patterns to apply to a board   []
-      * create pattern highlighting function []
+      * create pattern highlighting function [x]
     * Chord diagrams                         []
     * Scale degree sequence (progressions)   []
     * Tabs                                   []
@@ -111,7 +111,7 @@ let is_diatonic struc note =
       * function to print chords             []
       * function to print notes              []
     * Add lambda_term support for
-    interactive experience                   []
+    interactive experience                   [x]
     * Markov Chord progressions              []
     * generer du midi                        []
     * generer partoche pdf                   []

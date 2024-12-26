@@ -1,7 +1,13 @@
   let view_flat ctx ocamuse_context event =
     let open Types in
     let make_struc ctx fretboard color : Types.flat_view_draw_struc  =
-      let offset_for_frets_numbers = 4 in
+      let offset_for_frets_numbers =
+          match !(ocamuse_context.display_mode) with
+          | Flat Plain _ -> 0
+          | Flat Fretted _ -> 1
+          | Flat Interline _ -> 1
+          | Pattern _ -> assert false
+      in
       let number_of_strings = Array.length fretboard in
       let cursor_j = ref 0 in
       let offset = ref offset_for_frets_numbers in
@@ -39,7 +45,13 @@ let view_pattern ctx view ocamuse_context mode =
     =
     let cursor_i = ref 0 in
     let cursor_j = ref 0 in
-    let offset_for_frets_numbers = 4 in
+    let offset_for_frets_numbers =
+      match !(ocamuse_context.display_mode) with
+      | Pattern (Plain _, _) -> 0
+      | Pattern (Fretted _, _) -> 1
+      | Pattern (Interline _, _) -> 1
+      | Flat _ -> assert false
+    in
     let fretboard = ocamuse_context.fretboard in
     let offset = ref offset_for_frets_numbers in
     let number_of_strings = Array.length ocamuse_context.fretboard in

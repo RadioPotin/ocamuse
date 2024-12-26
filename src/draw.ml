@@ -42,7 +42,7 @@ let write_plain_frets (struc :Types.flat_view_draw_struc) =
     Pp.FRETBOARD.FMT.stringify_plain_string (!(struc.string), !(struc.guitar_string))
   in
   draw_styled struc.ctx
-    !(struc.cursor_j)
+    (!(struc.cursor_j) - 1)
     !(struc.offset)
     (eval [B_fg struc.color; S string_line; E_fg])
 end
