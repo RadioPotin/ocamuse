@@ -74,24 +74,22 @@ let build_tonality mode note =
 let build_diatonic_triads_sequence mode note =
   let diatonic_chord_sequence = chords_of_mode mode in
   let tonality = build_tonality mode note in
-  List.map2
-    (fun chord note -> (note, chord)) diatonic_chord_sequence tonality
+  List.map2 (fun chord note -> (note, chord)) diatonic_chord_sequence tonality
 
 let build_degree_tbl mode =
   let degree_tbl = Hashtbl.create 512 in
-  List.iteri (fun i note -> Hashtbl.add degree_tbl note (i)) mode;
+  List.iteri (fun i note -> Hashtbl.add degree_tbl note i) mode;
   degree_tbl
 
 let build_degree_colour_tbl mode =
   let degree_colour_tbl = Hashtbl.create 512 in
   List.iteri
     (fun i _note ->
-        let color = Conv.degree_to_colour (i) in
-        let color = Color.event_to_color color in
-        Hashtbl.add degree_colour_tbl (i) color)
+      let color = Conv.degree_to_colour i in
+      let color = Color.event_to_color color in
+      Hashtbl.add degree_colour_tbl i color )
     mode;
   degree_colour_tbl
-
 
 let is_diatonic struc note =
   let open Types in

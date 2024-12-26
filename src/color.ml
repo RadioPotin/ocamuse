@@ -1,5 +1,5 @@
 (** module COLOR is destined to hold all functions and operations on displaying
-      a colourful output *)
+    a colourful output *)
 let bubble_color =
   let open Types in
   begin
@@ -54,27 +54,26 @@ let event_to_color =
 let event_to_color_flat_view =
   let open Types in
   function
-  | Fretted event ->  event_to_base_color event
-  | Plain event ->    event_to_base_color event
+  | Fretted event -> event_to_base_color event
+  | Plain event -> event_to_base_color event
   | Interline event -> event_to_base_color event
 
 let is_equal color colour : bool =
   let open LTerm_style in
-  let s1 = {none with foreground = Some color} in
-  let s2 = {none with foreground = Some colour} in
+  let s1 = { none with foreground = Some color } in
+  let s2 = { none with foreground = Some colour } in
   LTerm_style.equal s1 s2
 
 let find_color struc note =
   let open Types in
   match Hashtbl.find_opt struc.notes_to_degree_tbl note with
   | None -> struc.color
-  | Some degree ->
-    Hashtbl.find struc.degree_to_color_tbl degree
+  | Some degree -> Hashtbl.find struc.degree_to_color_tbl degree
 
 let random_base_colour =
   let open Types in
-  let () = Random.self_init ()
-  in fun () : Types.base_colour ->
+  let () = Random.self_init () in
+  fun () : Types.base_colour ->
     match Random.int 4 with
     | 0 -> Lblack
     | 1 -> Black
