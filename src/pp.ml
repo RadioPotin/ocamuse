@@ -414,12 +414,11 @@ module OCAMUSE = struct
       let aux fmt = function
         | Flat view -> fprintf fmt "View:&&&Flat:%a" pp_view view
         | Pattern (view, mode) ->
-            fprintf fmt "View:&&&Pattern:%a&&&Mode:%a" pp_view view pp_mode mode
+          fprintf fmt "View:&&&Pattern:%a&&&Mode:%a" pp_view view pp_mode mode
       in
       fprintf fmt "DISPLAY:%a" aux dm
 
   let pp_tuning =
-    let open Types in
     let open Format in
     fun fmt n_l ->
       pp_print_list ~pp_sep:(fun fmt () -> fprintf fmt "=") NOTES.FMT.print_note fmt n_l

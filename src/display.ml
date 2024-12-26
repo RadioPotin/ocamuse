@@ -1,79 +1,30 @@
-let make_struc ctx fretboard color : Types.flat_view_draw_struc  =
-  let offset_for_frets_numbers = 4 in
-  let number_of_strings = Array.length fretboard in
-  let cursor_j = ref 0 in
-  let offset = ref offset_for_frets_numbers in
-  {
-    ctx;
-    color;
-    offset;
-    cursor_j;
-    fretboard;
-    string = ref 0;
-    number_of_strings;
-    guitar_string = ref fretboard.(0);
-  }
-
-let view_plain_rows ctx fretboard color =
-  let struc = make_struc ctx fretboard color in
-  let update_field field i = field := i in
-  let i = ref 0 in
-  while !i < struc.number_of_strings do
-    update_field struc.string !i;
-    update_field struc.guitar_string struc.fretboard.(!i) ;
-    update_field struc.cursor_j (!(struc.cursor_j) + 1);
-    Draw_line.write_plain_frets struc;
-    i := !i + 1
-  done
-
-let view_rows_with_interlines ctx fretboard color =
-  let struc = make_struc ctx fretboard color in
-  let update_field field i = field := i in
-  let move_cursor (struc : Types.flat_view_draw_struc) =
-    update_field struc.cursor_j (!(struc.cursor_j) + 1)
+  let view_flat ctx ocamuse_context event =
+    let open Types in
+    let make_struc ctx fretboard color : Types.flat_view_draw_struc  =
+      let offset_for_frets_numbers = 4 in
+      let number_of_strings = Array.length fretboard in
+      let cursor_j = ref 0 in
+      let offset = ref offset_for_frets_numbers in
+      {
+        ctx;
+        color;
+        offset;
+        cursor_j;
+        fretboard;
+        string = ref 0;
+        number_of_strings;
+        guitar_string = ref fretboard.(0);
+      }
   in
-  (* top fret numbers *)
-  Draw_line.write_fret_numbers struc;
-  move_cursor struc;
-  (* interline *)
-  Draw_line.write_interline struc;
-  move_cursor struc;
-  let i = ref 0 in
-  while !i < struc.number_of_strings do
-    update_field struc.guitar_string struc.fretboard.(!i);
-    (* frets and notes *)
-    Draw_line.write_frets struc;
-    move_cursor struc;
-    update_field struc.string !i;
-    (* interline *)
-    Draw_line.write_interline struc;
-    move_cursor struc;
-    incr i
-  done
-
-let view_rows_with_no_interline ctx fretboard color =
-  let open LTerm_text in
-  let struc = make_struc ctx fretboard color in
-  Array.iteri (fun string_nb string ->
-    let offset = !(struc.offset) in
-    if string_nb = 0 then
-      begin
-        let fret_line =
-          Pp.FRETBOARD.FMT.stringify_frets_numbers (string_nb, string)
-        in
-        LTerm_draw.draw_styled struc.ctx
-          (offset - 1)
-          offset
-          (eval [B_fg struc.color ; S fret_line; E_fg])
-      end;
-    let string_line =
-      Pp.FRETBOARD.FMT.stringify_frets (string_nb, string)
-    in
-    LTerm_draw.draw_styled struc.ctx
-      (string_nb + offset)
-      offset
-      (eval [B_fg struc.color; S string_line; E_fg]);
-  ) struc.fretboard
+  let color = Color.event_to_color_flat_view event in
+  let struc = make_struc ctx ocamuse_context.fretboard color in
+  match event with
+  | Fretted _ ->
+    Draw.PLAIN.rows_with_no_interline struc
+  | Interline _ ->
+    Draw.PLAIN.rows_with_interlines struc
+  | Plain _ ->
+    Draw.PLAIN.rows struc
 
 let view_pattern ctx view ocamuse_context mode =
   let open Types in
@@ -125,5 +76,5 @@ let view_pattern ctx view ocamuse_context mode =
         degree_to_colour_tbl
         ocamuse_context
     in
-    Draw_cell.write_pattern struc
+    Draw.PATTERN.pattern struc
   end

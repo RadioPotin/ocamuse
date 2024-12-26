@@ -1,4 +1,121 @@
-let writerate (struc: Types.pattern_view_draw_struc) style string =
+module LINE = struct
+
+open LTerm_text
+
+let write_interline (struc :Types.flat_view_draw_struc) =
+  let open LTerm_draw in
+  let guitar_string = struc.guitar_string in
+  let string_line =
+    Pp.FRETBOARD.FMT.stringify_interline (struc.string, !guitar_string)
+  in
+  draw_styled struc.ctx
+    !(struc.cursor_j)
+    !(struc.offset)
+    (eval [B_fg struc.color; S string_line; E_fg])
+
+let write_frets (struc :Types.flat_view_draw_struc) =
+  let open LTerm_draw in
+  let guitar_string = struc.guitar_string in
+  let string_line =
+    Pp.FRETBOARD.FMT.stringify_frets (struc.string, !guitar_string)
+  in
+  draw_styled struc.ctx
+    !(struc.cursor_j)
+    !(struc.offset)
+    (eval [B_fg struc.color; S string_line; E_fg])
+
+let write_fret_numbers (struc :Types.flat_view_draw_struc) =
+  let guitar_string = struc.guitar_string in
+  let open LTerm_draw in
+  let fret_line =
+    Pp.FRETBOARD.FMT.stringify_frets_numbers
+      (struc.string, !guitar_string)
+  in
+  draw_styled struc.ctx
+    !(struc.cursor_j)
+    !(struc.offset)
+    (eval [B_fg struc.color ; S fret_line; E_fg])
+
+let write_plain_frets (struc :Types.flat_view_draw_struc) =
+  let open LTerm_draw in
+  let string_line =
+    Pp.FRETBOARD.FMT.stringify_plain_string (!(struc.string), !(struc.guitar_string))
+  in
+  draw_styled struc.ctx
+    !(struc.cursor_j)
+    !(struc.offset)
+    (eval [B_fg struc.color; S string_line; E_fg])
+end
+
+module PLAIN = struct
+
+let rows =
+  let open Types in
+  fun (struc : flat_view_draw_struc) ->
+  let update_field field i = field := i in
+  let i = ref 0 in
+  while !i < struc.number_of_strings do
+    update_field struc.string !i;
+    update_field struc.guitar_string struc.fretboard.(!i) ;
+    update_field struc.cursor_j (!(struc.cursor_j) + 1);
+    LINE.write_plain_frets struc;
+    i := !i + 1
+  done
+
+let rows_with_interlines =
+  let open Types in
+  fun (struc : flat_view_draw_struc) ->
+  let update_field field i = field := i in
+  let move_cursor (struc : Types.flat_view_draw_struc) =
+    update_field struc.cursor_j (!(struc.cursor_j) + 1)
+  in
+  (* top fret numbers *)
+  LINE.write_fret_numbers struc;
+  move_cursor struc;
+  (* interline *)
+  LINE.write_interline struc;
+  move_cursor struc;
+  let i = ref 0 in
+  while !i < struc.number_of_strings do
+    update_field struc.guitar_string struc.fretboard.(!i);
+    (* frets and notes *)
+    LINE.write_frets struc;
+    move_cursor struc;
+    update_field struc.string !i;
+    (* interline *)
+    LINE.write_interline struc;
+    move_cursor struc;
+    incr i
+  done
+
+let rows_with_no_interline =
+  let open LTerm_text in
+  let open Types in
+  fun (struc : flat_view_draw_struc) ->
+  Array.iteri (fun string_nb string ->
+    let offset = !(struc.offset) in
+    if string_nb = 0 then
+      begin
+        let fret_line =
+          Pp.FRETBOARD.FMT.stringify_frets_numbers (string_nb, string)
+        in
+        LTerm_draw.draw_styled struc.ctx
+          (offset - 1)
+          offset
+          (eval [B_fg struc.color ; S fret_line; E_fg])
+      end;
+    let string_line =
+      Pp.FRETBOARD.FMT.stringify_frets (string_nb, string)
+    in
+    LTerm_draw.draw_styled struc.ctx
+      (string_nb + offset)
+      offset
+      (eval [B_fg struc.color; S string_line; E_fg]);
+  ) struc.fretboard
+end
+
+module PATTERN = struct
+  let writerate (struc: Types.pattern_view_draw_struc) style string =
   String.iteri (fun i c ->
     LTerm_draw.draw_char struc.ctx
       (!(struc.cursor_j) + !(struc.offset))
@@ -293,8 +410,10 @@ module INTERLINE = struct
     done
 end
 
-let write_pattern (struc : Types.pattern_view_draw_struc) =
+let pattern (struc : Types.pattern_view_draw_struc) =
   match struc.view with
   | Plain _ -> PLAIN.view struc
   | Fretted _ -> FRETTED.view struc
   | Interline _ -> INTERLINE.view struc
+
+end

@@ -42,39 +42,14 @@ let bubble_view =
   | Flat view -> view
   | Pattern (view, _mode) -> view
 
-let select_pattern_view_display_mode ctx ocamuse_context (view, mode) =
-  let open Types in
-  match view with
-  | Fretted color ->
-    ocamuse_context.base_colour := color;
-    Display.view_pattern ctx view ocamuse_context mode
-  | Interline color ->
-    ocamuse_context.base_colour := color;
-    Display.view_pattern ctx view ocamuse_context mode
-  | Plain color ->
-    ocamuse_context.base_colour := color;
-    Display.view_pattern ctx view ocamuse_context mode
-
-let select_full_view_display_mode ctx ocamuse_context event =
-  let open Types in
-  let color = Color.event_to_color_flat_view event in
-  match event with
-  | Fretted _ ->
-    Display.view_rows_with_no_interline ctx ocamuse_context.fretboard color
-  | Interline _ ->
-    Display.view_rows_with_interlines ctx ocamuse_context.fretboard color
-  | Plain _ ->
-    Display.view_plain_rows ctx ocamuse_context.fretboard color
-
-
 let select_view ctx ocamuse_context =
   let open Types in
   LTerm_draw.clear ctx;
   match !(ocamuse_context.display_mode) with
   | Flat mode ->
-    select_full_view_display_mode ctx ocamuse_context mode
+    Display.view_flat ctx ocamuse_context mode
   | Pattern (view, mode) ->
-    select_pattern_view_display_mode ctx ocamuse_context (view, mode)
+    Display.view_pattern ctx view ocamuse_context mode
 
 class fretboard_widget ocamuse_context =
   object (self)
@@ -88,61 +63,118 @@ class fretboard_widget ocamuse_context =
       self#on_event (fun event ->
         let open LTerm_event in
         let open Types in
-        match event with
-        | Key { code = Up; _ } ->
-          (* Blue fretboard *)
-          ocamuse_context.display_mode := Flat (Fretted !(ocamuse_context.base_colour));
-          self#queue_draw;
-          true
-        | Key { code = Left; _ } ->
-          (* Green fretboard *)
-          ocamuse_context.display_mode := Flat (Plain !(ocamuse_context.base_colour));
-          self#queue_draw;
-          true
-        | Key { code = Right; _ } ->
-          (* Interline fretboard *)
-          ocamuse_context.display_mode := Flat (Interline !(ocamuse_context.base_colour));
-          self#queue_draw;
-          true
-        | Key { code = Prev_page; _ } ->
-          (* Rotate color backward *)
-          ocamuse_context.base_colour :=
-            Color.rotate_to_prev !(ocamuse_context.base_colour);
-          ocamuse_context.display_mode :=
-            Flat (update_color Color.rotate_to_prev
-              @@ bubble_view !(ocamuse_context.display_mode));
-          self#queue_draw;
-          true
-        | Key { code = Next_page; _ } ->
-          (* Rotate color forward *)
-          ocamuse_context.base_colour :=
-            Color.rotate_to_next !(ocamuse_context.base_colour);
-          ocamuse_context.display_mode :=
-            Flat (update_color Color.rotate_to_next
-              @@ bubble_view !(ocamuse_context.display_mode));
-          self#queue_draw;
-          true
-        | Key { code = Enter; _ } ->
-          (* Switch to Pattern view *)
+        match !(ocamuse_context.display_mode) with
+        | Flat _ ->
           begin
-            match !(ocamuse_context.display_mode) with
-            | Flat mode ->
-              ocamuse_context.display_mode := Pattern (mode, C_mode);
+            match event with
+            | Key { code = Up; _ } ->
+              (* Blue fretboard *)
+              ocamuse_context.display_mode := Flat (Fretted !(ocamuse_context.base_colour));
               self#queue_draw;
               true
-            | _ -> true
-          end
-        | Key { code = Escape; _ } ->
-          (* Exit Pattern view *)
-          begin
-            match !(ocamuse_context.display_mode) with
-            | Pattern (view, _) ->
-              ocamuse_context.display_mode := Flat view;
+            | Key { code = Left; _ } ->
+              (* Green fretboard *)
+              ocamuse_context.display_mode := Flat (Plain !(ocamuse_context.base_colour));
               self#queue_draw;
               true
-            | _ -> true
+            | Key { code = Right; _ } ->
+              (* Interline fretboard *)
+              ocamuse_context.display_mode := Flat (Interline !(ocamuse_context.base_colour));
+              self#queue_draw;
+              true
+            | Key { code = Prev_page; _ } ->
+              (* Rotate color backward *)
+              ocamuse_context.base_colour :=
+                Color.rotate_to_prev !(ocamuse_context.base_colour);
+              ocamuse_context.display_mode :=
+                Flat (update_color Color.rotate_to_prev
+                  @@ bubble_view !(ocamuse_context.display_mode));
+              self#queue_draw;
+              true
+            | Key { code = Next_page; _ } ->
+              (* Rotate color forward *)
+              ocamuse_context.base_colour :=
+                Color.rotate_to_next !(ocamuse_context.base_colour);
+              ocamuse_context.display_mode :=
+                Flat (update_color Color.rotate_to_next
+                  @@ bubble_view !(ocamuse_context.display_mode));
+              self#queue_draw;
+              true
+            | Key { code = Enter; _ } ->
+              (* Switch to Pattern view *)
+              begin
+                match !(ocamuse_context.display_mode) with
+                | Flat mode ->
+                  ocamuse_context.display_mode := Pattern (mode, C_mode);
+                  self#queue_draw;
+                  true
+                | _ -> true
+              end
+            | Key { code = Escape; _ } ->
+              (* Exit Pattern view *)
+              begin
+                match !(ocamuse_context.display_mode) with
+                | Pattern (view, _) ->
+                  ocamuse_context.display_mode := Flat view;
+                  self#queue_draw;
+                  true
+                | _ -> true
+              end
+            | _ -> false
           end
-        | _ -> false
+        | Pattern (view, mode) ->
+          begin
+            let color = Color.bubble_color view in
+            ocamuse_context.base_colour := color;
+            match event with
+            | Key{ code = Up; _ } ->
+              (* blue fretboard *)
+              ocamuse_context.display_mode
+              := Pattern (Fretted color, mode);
+              self#queue_draw;
+              true
+
+            | Key{ code = Left; _ } ->
+              (* green fretboard *)
+              ocamuse_context.display_mode
+              := Pattern (Plain color, mode);
+              self#queue_draw;
+              true
+
+            | Key{ code = Right; _ } ->
+              (* green fretboard *)
+              ocamuse_context.display_mode
+              := Pattern (Interline color, mode);
+              self#queue_draw;
+              true
+
+            | Key{ code = Prev_page; _ } ->
+              (* blue fretboard *)
+              ocamuse_context.display_mode
+              := Pattern ( update_color Color.rotate_to_prev view, mode);
+              self#queue_draw;
+              true
+
+            | Key{ code = Next_page; _ } ->
+              (* green fretboard *)
+              ocamuse_context.display_mode
+              := Pattern ( update_color Color.rotate_to_next view, mode);
+              self#queue_draw;
+              true
+
+            | Key{ code = Enter; _ } ->
+              ocamuse_context.display_mode
+              := Pattern (view, mode);
+              self#queue_draw;
+              true
+
+            | Key{ code = Backspace ; _ } ->
+              ocamuse_context.display_mode
+              := Flat view;
+              self#queue_draw;
+              true
+            | _ -> false
+          end
       )
 
   end
@@ -168,6 +200,7 @@ class main_box ocamuse_context wakener =
         | Key { code = Right; _ }
         | Key { code = Prev_page; _ }
         | Key { code = Next_page; _ }
+        | Key { code = Backspace; _ }
         | Key { code = Enter; _ } ->
           (* Propagate the event to the fretboard widget *)
           fretboard_widget#send_event event;
