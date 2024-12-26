@@ -375,3 +375,63 @@ module FRETBOARD = struct
   end
 
 end
+
+module OCAMUSE = struct
+
+  let pp_mode =
+    let open Types in
+    let open Format in
+    fun fmt -> function
+      | C_mode -> fprintf fmt "C_mode";
+      | D_mode -> fprintf fmt "D_mode";
+      | E_mode -> fprintf fmt "E_mode";
+      | F_mode -> fprintf fmt "F_mode";
+      | G_mode -> fprintf fmt "G_mode";
+      | A_mode -> fprintf fmt "A_mode";
+      | B_mode -> fprintf fmt "B_mode"
+
+  let pp_base_colour =
+    let open Types in
+    let open Format in
+    fun fmt -> function
+      | Black -> fprintf fmt "Black"
+      | Lblack -> fprintf fmt "Lblack"
+      | White -> fprintf fmt "White"
+      | Lwhite -> fprintf fmt "Lwhite"
+
+  let pp_view =
+    let open Types in
+    let open Format in
+    fun fmt -> function
+      | Plain base_colour -> fprintf fmt "%a" pp_base_colour base_colour
+      | Fretted base_colour -> fprintf fmt "%a" pp_base_colour base_colour
+      | Interline base_colour -> fprintf fmt "%a" pp_base_colour base_colour
+
+  let pp_display_mode =
+    let open Types in
+    let open Format in
+    fun fmt dm ->
+      let aux fmt = function
+        | Flat view -> fprintf fmt "View:&&&Flat:%a" pp_view view
+        | Pattern (view, mode) ->
+            fprintf fmt "View:&&&Pattern:%a&&&Mode:%a" pp_view view pp_mode mode
+      in
+      fprintf fmt "DISPLAY:%a" aux dm
+
+  let pp_tuning =
+    let open Types in
+    let open Format in
+    fun fmt n_l ->
+      pp_print_list ~pp_sep:(fun fmt () -> fprintf fmt "=") NOTES.FMT.print_note fmt n_l
+
+  let context =
+    let open Types in
+    let open Format in
+    fun fmt {display_mode;base_colour;tuning;root_note;mode;_} ->
+      fprintf fmt "%a|||" pp_display_mode !display_mode;
+      fprintf fmt "%a|||" pp_base_colour !base_colour;
+      fprintf fmt "%a|||" pp_mode mode;
+      fprintf fmt "%a|||" pp_tuning tuning;
+      fprintf fmt "%a|||" NOTES.FMT.print_note root_note;
+      print_newline ()
+end
