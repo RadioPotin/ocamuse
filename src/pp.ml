@@ -376,89 +376,62 @@ module FRETBOARD = struct
 
 end
 
-module COLOR = struct
-  (** module COLOR is destined to hold all functions and operations on displaying
-        a colourful output *)
-  let bubble_color =
+module OCAMUSE = struct
+
+  let pp_mode =
     let open Types in
-    begin
-      function
-      | Plain view_color -> view_color
-      | Fretted view_color -> view_color
-      | Interline view_color -> view_color
-    end
+    let open Format in
+    fun fmt -> function
+      | C_mode -> fprintf fmt "C_mode";
+      | D_mode -> fprintf fmt "D_mode";
+      | E_mode -> fprintf fmt "E_mode";
+      | F_mode -> fprintf fmt "F_mode";
+      | G_mode -> fprintf fmt "G_mode";
+      | A_mode -> fprintf fmt "A_mode";
+      | B_mode -> fprintf fmt "B_mode"
 
-  let rotate_to_prev =
+  let pp_base_colour =
     let open Types in
-    function
-    | Lwhite -> Black
-    | Lblack -> Lwhite
-    | White -> Lblack
-    | Black -> White
+    let open Format in
+    fun fmt -> function
+      | Black -> fprintf fmt "Black"
+      | Lblack -> fprintf fmt "Lblack"
+      | White -> fprintf fmt "White"
+      | Lwhite -> fprintf fmt "Lwhite"
 
-  let rotate_to_next =
+  let pp_view =
     let open Types in
-    function
-    | Lwhite -> Lblack
-    | Lblack -> White
-    | White -> Black
-    | Black -> Lwhite
+    let open Format in
+    fun fmt -> function
+      | Plain base_colour -> fprintf fmt "%a" pp_base_colour base_colour
+      | Fretted base_colour -> fprintf fmt "%a" pp_base_colour base_colour
+      | Interline base_colour -> fprintf fmt "%a" pp_base_colour base_colour
 
-  let event_to_base_color =
-    let open LTerm_style in
+  let pp_display_mode =
     let open Types in
-    function
-    | Lwhite -> lwhite
-    | Lblack -> lblack
-    | White -> white
-    | Black -> black
+    let open Format in
+    fun fmt dm ->
+      let aux fmt = function
+        | Flat view -> fprintf fmt "View:&&&Flat:%a" pp_view view
+        | Pattern (view, mode) ->
+            fprintf fmt "View:&&&Pattern:%a&&&Mode:%a" pp_view view pp_mode mode
+      in
+      fprintf fmt "DISPLAY:%a" aux dm
 
-  let event_to_color =
-    let open LTerm_style in
+  let pp_tuning =
     let open Types in
-    function
-    | Red -> red
-    | Green -> green
-    | Yellow -> yellow
-    | Blue -> blue
-    | Magenta -> magenta
-    | Cyan -> cyan
-    | Lred -> lred
-    | Lgreen -> lgreen
-    | Lyellow -> lyellow
-    | Lblue -> lblue
-    | Lmagenta -> lmagenta
-    | Lcyan -> lcyan
+    let open Format in
+    fun fmt n_l ->
+      pp_print_list ~pp_sep:(fun fmt () -> fprintf fmt "=") NOTES.FMT.print_note fmt n_l
 
-  let event_to_color_flat_view =
+  let context =
     let open Types in
-    function
-    | Fretted event ->  event_to_base_color event
-    | Plain event ->    event_to_base_color event
-    | Interline event -> event_to_base_color event
-
-  let is_equal color colour : bool =
-    let open LTerm_style in
-    let s1 = {none with foreground = Some color} in
-    let s2 = {none with foreground = Some colour} in
-    LTerm_style.equal s1 s2
-
-  let find_color struc note =
-    let open Types in
-    match Hashtbl.find_opt struc.notes_to_degree_tbl note with
-    | None -> struc.color
-    | Some degree ->
-      Hashtbl.find struc.degree_to_color_tbl degree
-
-  let random_base_colour =
-    let open Types in
-    let () = Random.self_init ()
-    in fun () : Types.base_colour ->
-      match Random.int 4 with
-      | 0 -> Lblack
-      | 1 -> Black
-      | 2 -> White
-      | 3 -> Lwhite
-      | _n -> assert false
-
+    let open Format in
+    fun fmt {display_mode;base_colour;tuning;root_note;mode;_} ->
+      fprintf fmt "%a|||" pp_display_mode !display_mode;
+      fprintf fmt "%a|||" pp_base_colour !base_colour;
+      fprintf fmt "%a|||" pp_mode mode;
+      fprintf fmt "%a|||" pp_tuning tuning;
+      fprintf fmt "%a|||" NOTES.FMT.print_note root_note;
+      print_newline ()
 end

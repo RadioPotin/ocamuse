@@ -38,7 +38,7 @@ let write_note (struc : Types.pattern_view_draw_struc) j i =
       note
   in
   let bold = Ocamuse.is_diatonic struc note in
-  let note_color = Pp.COLOR.find_color struc note in
+  let note_color = Color.find_color struc note in
   let style =
     {
       none with
