@@ -1,6 +1,3 @@
-open Lwt
-open LTerm_geom
-
 (* Default context initialization *)
 let default_context () =
   let open Types in
@@ -45,111 +42,48 @@ let bubble_view =
   | Flat view -> view
   | Pattern (view, _mode) -> view
 
-let select_full_view_display_mode size ctx ocamuse_context event =
-  let open LTerm_geom in
+let select_pattern_view_display_mode ctx ocamuse_context (view, mode) =
   let open Types in
-  let color = Color.event_to_color_flat_view event in
-  let sub_ctx =
-    let offset_of_sub_context = 15 in
-    let position =
-      {
-        row1 = offset_of_sub_context;
-        col1 = offset_of_sub_context;
-        row2 = size.rows - 1;
-        col2 = size.cols - 1;
-      }
-    in
-    LTerm_draw.sub ctx position
-  in
-  match event with
-  | Fretted _ ->
-    Display.view_rows_with_no_interline sub_ctx ocamuse_context.fretboard color
-  | Interline _ ->
-    let sub_ctx =
-      let offset_of_sub_context = 15 in
-      let position =
-        {
-          row1 = 18;
-          col1 = offset_of_sub_context;
-          row2 = size.rows - 1;
-          col2 = size.cols - 1;
-        }
-      in
-      LTerm_draw.sub ctx position
-    in
-    Display.view_rows_with_interlines sub_ctx ocamuse_context.fretboard color
-  | Plain _ ->
-    let open LTerm_geom in
-    let position =
-      {
-        row1 = 19;
-        col1 = 42;
-        row2 = size.rows - 1;
-        col2 = size.cols - 1;
-      }
-    in
-    let ctx = LTerm_draw.sub ctx position in
-    Display.view_plain_rows ctx ocamuse_context.fretboard color
-
-let select_pattern_view_display_mode size ctx ocamuse_context (view, mode) =
-  let open Types in
-  let open LTerm_geom in
-  let sub_ctx =
-    let offset_of_sub_context = 15 in
-    let position =
-      {
-        row1 = offset_of_sub_context;
-        col1 = offset_of_sub_context;
-        row2 = size.rows - 1;
-        col2 = size.cols - 1;
-      }
-    in
-    LTerm_draw.sub ctx position
-  in
   match view with
   | Fretted color ->
     ocamuse_context.base_colour := color;
-    Display.view_pattern sub_ctx view ocamuse_context mode
+    Display.view_pattern ctx view ocamuse_context mode
   | Interline color ->
     ocamuse_context.base_colour := color;
-    Display.view_pattern sub_ctx view ocamuse_context mode
+    Display.view_pattern ctx view ocamuse_context mode
   | Plain color ->
-    let open LTerm_geom in
-    let position =
-      {
-        row1 = 16;
-        col1 = 42;
-        row2 = size.rows - 1;
-        col2 = size.cols - 1;
-      }
-    in
-    let ctx = LTerm_draw.sub ctx position in
     ocamuse_context.base_colour := color;
     Display.view_pattern ctx view ocamuse_context mode
 
-let select_view ctx size ocamuse_context =
+let select_full_view_display_mode ctx ocamuse_context event =
+  let open Types in
+  let color = Color.event_to_color_flat_view event in
+  match event with
+  | Fretted _ ->
+    Display.view_rows_with_no_interline ctx ocamuse_context.fretboard color
+  | Interline _ ->
+    Display.view_rows_with_interlines ctx ocamuse_context.fretboard color
+  | Plain _ ->
+    Display.view_plain_rows ctx ocamuse_context.fretboard color
+
+
+let select_view ctx ocamuse_context =
   let open Types in
   LTerm_draw.clear ctx;
   match !(ocamuse_context.display_mode) with
   | Flat mode ->
-    select_full_view_display_mode size ctx ocamuse_context mode
+    select_full_view_display_mode ctx ocamuse_context mode
   | Pattern (view, mode) ->
-    select_pattern_view_display_mode size ctx ocamuse_context (view, mode)
+    select_pattern_view_display_mode ctx ocamuse_context (view, mode)
 
-class fretboard_widget ocamuse_context  =
-  object(self)
+class fretboard_widget ocamuse_context =
+  object (self)
     inherit LTerm_widget.t "fretboard"
 
-    val mutable matrix =
-      let open Types in
-      LTerm_draw.make_matrix
-        {rows = Array.length ocamuse_context.fretboard;
-          cols = Array.length ocamuse_context.fretboard.(0)}
-
     method! draw ctx _focused =
-      select_view ctx (self#size_request) ocamuse_context
+      LTerm_draw.clear ctx;
+      select_view ctx ocamuse_context
 
-    (* Override the draw method to print fretboard based on the state *)
     initializer
       self#on_event (fun event ->
         let open LTerm_event in
@@ -213,19 +147,42 @@ class fretboard_widget ocamuse_context  =
 
   end
 
+
+class main_box ocamuse_context wakener =
+  object (self)
+    inherit LTerm_widget.vbox
+
+    val fretboard_widget = new fretboard_widget ocamuse_context
+
+    initializer
+      self#add fretboard_widget;
+      self#on_event (fun event ->
+        let open LTerm_key in
+        match event with
+        | Key { code = Escape; _ } ->
+          (* Signal termination *)
+          Lwt.wakeup wakener ();
+          false
+        | Key { code = Up; _ }
+        | Key { code = Left; _ }
+        | Key { code = Right; _ }
+        | Key { code = Prev_page; _ }
+        | Key { code = Next_page; _ }
+        | Key { code = Enter; _ } ->
+          (* Propagate the event to the fretboard widget *)
+          fretboard_widget#send_event event;
+          true
+        | _ -> false)
+  end
+
+
 let run () =
-  let main_box = new LTerm_widget.vbox in
+  let open Lwt in
   let waiter, wakener = wait () in
   let ocamuse_context = default_context () in
-
-  let fretboard = new fretboard_widget ocamuse_context in
-  main_box#add ~expand:true fretboard;
+  let main_box = new main_box ocamuse_context wakener in
 
   Lazy.force LTerm.stdout >>= fun term ->
-  LTerm.disable_mouse term >>= fun () ->
-  main_box#on_event (function
-      LTerm_event.Key{LTerm_key.code=LTerm_key.Escape ;_} ->
-      wakeup wakener (); false | _ -> false);
   Lwt.finalize
     (fun () -> LTerm_widget.run term main_box waiter)
     (fun () -> LTerm.disable_mouse term)
