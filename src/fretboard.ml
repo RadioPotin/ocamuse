@@ -52,7 +52,7 @@ let init =
   fun ~(tuning : tuning) ?(range : int = 13) () : note array array ->
     mapi_down_strings
       (fun guitar_str_nb open_string ->
-          init_string guitar_str_nb range open_string )
+        init_string guitar_str_nb range open_string )
       tuning
 
 let scan_column_for_alterations (fret_nb, _string_nb) =
@@ -62,11 +62,8 @@ let scan_column_for_alterations (fret_nb, _string_nb) =
     | Some _note -> true
   in
   let set_alteration_flag flag key =
-    let note =
-      Hashtbl.find !coord_to_note_tbl key
-    in
-    flag := (note.alteration <> 0 || not !flag)
-
+    let note = Hashtbl.find !coord_to_note_tbl key in
+    flag := note.alteration <> 0 || not !flag
   in
   let string_nb = ref 1 in
   let alteration_detected = ref false in

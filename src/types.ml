@@ -71,47 +71,44 @@ type view =
   | Fretted of base_colour
   | Interline of base_colour
 
-type fretboard = ( int * note array ) array
+type fretboard = (int * note array) array
 
 type display =
   | Flat of view
   | Pattern of view * mode
 
 type flat_view_draw_struc =
-  {
-    string: int ref;
-    offset : int ref;
-    cursor_j : int ref;
-    number_of_strings: int;
-    ctx : LTerm_draw.context;
-    color : LTerm_style.color;
-    guitar_string : (note array) ref;
-    fretboard : (note array) array;
+  { string : int ref
+  ; offset : int ref
+  ; cursor_j : int ref
+  ; number_of_strings : int
+  ; ctx : LTerm_draw.context
+  ; color : LTerm_style.color
+  ; guitar_string : note array ref
+  ; fretboard : note array array
   }
 
 type pattern_view_draw_struc =
-  {
-    view : view;
-    mode : mode;
-    string: int ref;
-    offset : int ref;
-    cursor_i : int ref;
-    cursor_j : int ref;
-    number_of_frets: int;
-    number_of_strings: int;
-    ctx : LTerm_draw.context;
-    color : LTerm_style.color;
-    fretboard : (note array) array;
-    notes_to_degree_tbl: (note, int) Hashtbl.t;
-    degree_to_color_tbl: (int, LTerm_style.color) Hashtbl.t;
+  { view : view
+  ; mode : mode
+  ; string : int ref
+  ; offset : int ref
+  ; cursor_i : int ref
+  ; cursor_j : int ref
+  ; number_of_frets : int
+  ; number_of_strings : int
+  ; ctx : LTerm_draw.context
+  ; color : LTerm_style.color
+  ; fretboard : note array array
+  ; notes_to_degree_tbl : (note, int) Hashtbl.t
+  ; degree_to_color_tbl : (int, LTerm_style.color) Hashtbl.t
   }
 
 type ocamuse_structure =
-  {
-    display_mode : display ref;
-    fretboard : (note array) array;
-    base_colour : base_colour ref;
-    tuning : tuning;
-    root_note : note;
-    mode : mode;
+  { display_mode : display ref
+  ; fretboard : note array array
+  ; base_colour : base_colour ref
+  ; tuning : tuning
+  ; root_note : note
+  ; mode : mode
   }

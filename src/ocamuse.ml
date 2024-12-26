@@ -1,118 +1,205 @@
-let name_chord =
+(* Default context initialization *)
+let default_context () =
   let open Types in
-  fun (root : note) (chord_type : chord) : string ->
-    let base_str = Pp.NOTES.FMT.sprint_note root in
-    let suffix_str = Conv.chord_to_string chord_type in
-    base_str ^ suffix_str
+  let standard_tuning = [ E; A; D; G; B; E ] in
+  let default_tuning () : Types.tuning =
+    List.map (fun note -> { base = note; alteration = 0 }) standard_tuning
+  in
+  let base_colour = Color.random_base_colour () in
+  let display_mode = ref (Flat (Plain base_colour)) in
+  let root_note = { base = E; alteration = 0 } in
+  let tuning = default_tuning () in
+  let fretboard =
+    Fretboard.init
+      ~tuning:(Option.value (Some tuning) ~default:(default_tuning ()))
+      ~range:13 ()
+  in
+  { display_mode
+  ; fretboard
+  ; base_colour = ref base_colour
+  ; tuning
+  ; root_note
+  ; mode = C_mode
+  }
 
-(** [mode_rotation_int mode] takes a mode and returns the number of rotation
-    required to find its intervalic formula once applied to the formula of the
-    C_mode *)
-let mode_rotation_int =
+module MENU = struct
+  let _menu_message =
+    {| Use arrow keys to change view mode - Page Up / Page Down for color change - Enter for Pattern view - Escape to return |}
+end
+
+let update_color rotate =
   let open Types in
   function
-  | C_mode -> 0
-  | D_mode -> 1
-  | E_mode -> 2
-  | F_mode -> 3
-  | G_mode -> 4
-  | A_mode -> 5
-  | B_mode -> 6
+  | Fretted c -> Fretted (rotate c)
+  | Plain c -> Plain (rotate c)
+  | Interline c -> Interline (rotate c)
 
-(** [rotate_list_n l n] rotates the elements of l n times to the left *)
-let rec rotate_list_n l n =
-  if n = 0 then l
-  else match l with [] -> [] | x :: r -> rotate_list_n (r @ [ x ]) (n - 1)
-
-let compute_rotations base target =
-  let rotation_needed = mode_rotation_int target in
-  rotate_list_n base rotation_needed
-
-let chords_of_mode =
+let bubble_view =
   let open Types in
-  let base_diatonic_chord_formula =
-    [ Major; Minor; Minor; Major; Major; Minor; Diminished ]
-  in
-  fun mode -> compute_rotations base_diatonic_chord_formula mode
+  function Flat view -> view | Pattern (view, _mode) -> view
 
-(** [intervals_of_mode mode] takes a mode and returns its intervalic formula by
-    rotating the base formula of the C_mode *)
-let intervals_of_mode =
-  let base = [ 2; 2; 1; 2; 2; 2; 1 ] in
-  fun mode -> compute_rotations base mode
-
-(** [get_next_base_note_distance base_note] take a base_note a returns the
-    intervalic distance to the next one *)
-let get_next_base_note_distance =
+let select_view ctx ocamuse_context =
   let open Types in
-  function C -> 2 | D -> 2 | E -> 1 | F -> 2 | G -> 2 | A -> 2 | B -> 1
+  LTerm_draw.clear ctx;
+  match !(ocamuse_context.display_mode) with
+  | Flat mode -> Display.view_flat ctx ocamuse_context mode
+  | Pattern (view, mode) -> Display.view_pattern ctx view ocamuse_context mode
 
-(** [get_next_base_note note] takes a base_note and returns the next one *)
-let get_next_base_note =
-  let open Types in
-  function C -> D | D -> E | E -> F | F -> G | G -> A | A -> B | B -> C
+class fretboard_widget ocamuse_context =
+  object (self)
+    inherit LTerm_widget.t "fretboard"
 
-let get_next_degree =
-  let open Types in
-  fun { base; alteration } interval ->
-    let distance = get_next_base_note_distance base in
-    { base = get_next_base_note base
-    ; alteration = interval - distance + alteration
-    }
+    method! draw ctx _focused =
+      LTerm_draw.clear ctx;
+      select_view ctx ocamuse_context
 
-let rec compute_tonality mode note =
-  match mode with
-  | [] -> [] (* | [] -> [ note ] if we want C D E F G A B C *)
-  | interval :: mode ->
-    let next = get_next_degree note interval in
-    note :: compute_tonality mode next
+    initializer
+      self#on_event (fun event ->
+        let open LTerm_event in
+        let open Types in
+        match !(ocamuse_context.display_mode) with
+        | Flat _ -> begin
+          match event with
+          | Key { code = Up; _ } ->
+            (* Blue fretboard *)
+            ocamuse_context.display_mode :=
+              Flat (Fretted !(ocamuse_context.base_colour));
+            self#queue_draw;
+            true
+          | Key { code = Left; _ } ->
+            (* Green fretboard *)
+            ocamuse_context.display_mode :=
+              Flat (Plain !(ocamuse_context.base_colour));
+            self#queue_draw;
+            true
+          | Key { code = Right; _ } ->
+            (* Interline fretboard *)
+            ocamuse_context.display_mode :=
+              Flat (Interline !(ocamuse_context.base_colour));
+            self#queue_draw;
+            true
+          | Key { code = Prev_page; _ } ->
+            (* Rotate color backward *)
+            ocamuse_context.base_colour :=
+              Color.rotate_to_prev !(ocamuse_context.base_colour);
+            ocamuse_context.display_mode :=
+              Flat
+                ( update_color Color.rotate_to_prev
+                @@ bubble_view !(ocamuse_context.display_mode) );
+            self#queue_draw;
+            true
+          | Key { code = Next_page; _ } ->
+            (* Rotate color forward *)
+            ocamuse_context.base_colour :=
+              Color.rotate_to_next !(ocamuse_context.base_colour);
+            ocamuse_context.display_mode :=
+              Flat
+                ( update_color Color.rotate_to_next
+                @@ bubble_view !(ocamuse_context.display_mode) );
+            self#queue_draw;
+            true
+          | Key { code = Enter; _ } ->
+            (* Switch to Pattern view *)
+            begin
+              match !(ocamuse_context.display_mode) with
+              | Flat mode ->
+                ocamuse_context.display_mode := Pattern (mode, C_mode);
+                self#queue_draw;
+                true
+              | _ -> true
+            end
+          | Key { code = Escape; _ } ->
+            (* Exit Pattern view *)
+            begin
+              match !(ocamuse_context.display_mode) with
+              | Pattern (view, _) ->
+                ocamuse_context.display_mode := Flat view;
+                self#queue_draw;
+                true
+              | _ -> true
+            end
+          | _ -> false
+        end
+        | Pattern (view, mode) -> begin
+          let color = Color.bubble_color view in
+          ocamuse_context.base_colour := color;
+          match event with
+          | Key { code = Up; _ } ->
+            (* blue fretboard *)
+            ocamuse_context.display_mode := Pattern (Fretted color, mode);
+            self#queue_draw;
+            true
+          | Key { code = Left; _ } ->
+            (* green fretboard *)
+            ocamuse_context.display_mode := Pattern (Plain color, mode);
+            self#queue_draw;
+            true
+          | Key { code = Right; _ } ->
+            (* green fretboard *)
+            ocamuse_context.display_mode := Pattern (Interline color, mode);
+            self#queue_draw;
+            true
+          | Key { code = Prev_page; _ } ->
+            (* blue fretboard *)
+            ocamuse_context.display_mode :=
+              Pattern (update_color Color.rotate_to_prev view, mode);
+            self#queue_draw;
+            true
+          | Key { code = Next_page; _ } ->
+            (* green fretboard *)
+            ocamuse_context.display_mode :=
+              Pattern (update_color Color.rotate_to_next view, mode);
+            self#queue_draw;
+            true
+          | Key { code = Enter; _ } ->
+            ocamuse_context.display_mode := Pattern (view, mode);
+            self#queue_draw;
+            true
+          | Key { code = Backspace; _ } ->
+            ocamuse_context.display_mode := Flat view;
+            self#queue_draw;
+            true
+          | _ -> false
+        end )
+  end
 
-let build_tonality mode note =
-  let intervalic_formula = intervals_of_mode mode in
-  compute_tonality intervalic_formula note
+class main_box ocamuse_context wakener =
+  object (self)
+    inherit LTerm_widget.vbox
 
-let build_diatonic_triads_sequence mode note =
-  let diatonic_chord_sequence = chords_of_mode mode in
-  let tonality = build_tonality mode note in
-  List.map2
-    (fun chord note -> (note, chord)) diatonic_chord_sequence tonality
+    val fretboard_widget = new fretboard_widget ocamuse_context
 
-let build_degree_tbl mode =
-  let degree_tbl = Hashtbl.create 512 in
-  List.iteri (fun i note -> Hashtbl.add degree_tbl note (i)) mode;
-  degree_tbl
+    initializer
+      self#add fretboard_widget;
+      self#on_event (fun event ->
+        let open LTerm_key in
+        match event with
+        | Key { code = Escape; _ } ->
+          (* Signal termination *)
+          Lwt.wakeup wakener ();
+          false
+        | Key { code = Up; _ }
+        | Key { code = Left; _ }
+        | Key { code = Right; _ }
+        | Key { code = Prev_page; _ }
+        | Key { code = Next_page; _ }
+        | Key { code = Backspace; _ }
+        | Key { code = Enter; _ } ->
+          (* Propagate the event to the fretboard widget *)
+          fretboard_widget#send_event event;
+          true
+        | _ -> false )
+  end
 
-let build_degree_colour_tbl mode =
-  let degree_colour_tbl = Hashtbl.create 512 in
-  List.iteri
-    (fun i _note ->
-        let color = Conv.degree_to_colour (i) in
-        let color = Color.event_to_color color in
-        Hashtbl.add degree_colour_tbl (i) color)
-    mode;
-  degree_colour_tbl
+let run () =
+  let open Lwt in
+  let waiter, wakener = wait () in
+  let ocamuse_context = default_context () in
+  let main_box = new main_box ocamuse_context wakener in
 
+  Lazy.force LTerm.stdout >>= fun term ->
+  Lwt.finalize
+    (fun () -> LTerm_widget.run term main_box waiter)
+    (fun () -> LTerm.disable_mouse term)
 
-let is_diatonic struc note =
-  let open Types in
-  Hashtbl.mem struc.notes_to_degree_tbl note
-
-(*
-  TODO:
-    * suite d'accords d'une tonalité donnée  [x]
-    * Fretboard print                        [x]
-      * build patterns to apply to a board   []
-      * create pattern highlighting function [x]
-    * Chord diagrams                         []
-    * Scale degree sequence (progressions)   []
-    * Tabs                                   []
-      * map to fretboard                     []
-      * function to print sequence           []
-      * function to print chords             []
-      * function to print notes              []
-    * Add lambda_term support for
-    interactive experience                   [x]
-    * Markov Chord progressions              []
-    * generer du midi                        []
-    * generer partoche pdf                   []
- *)
+let () = Lwt_main.run (run ())

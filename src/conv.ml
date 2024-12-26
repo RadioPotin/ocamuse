@@ -25,7 +25,7 @@ let base_of_string =
   | 'e' | 'E' -> E
   | 'f' | 'F' -> F
   | 'g' | 'G' -> G
-  | _ -> invalid_arg "note_of_string"
+  | _ -> assert false
 
 let note_of_string s =
   let open Types in
@@ -36,9 +36,7 @@ let note_of_string s =
     let base = base_of_string s.[0] in
     let sub = String.sub s 1 (String.length s - 1) in
     let alteration =
-      match int_of_string_opt sub with
-      | None -> failwith "invalid_arg"
-      | Some s -> s
+      match int_of_string sub with None -> assert false | Some s -> s
     in
     { base; alteration }
 
@@ -52,7 +50,7 @@ let mode_of_string =
   | "E" | "e" -> E_mode
   | "F" | "f" -> F_mode
   | "G" | "g" -> G_mode
-  | _ -> invalid_arg "mode_of_string"
+  | _ -> assert false
 
 let note_to_int =
   let open Types in
