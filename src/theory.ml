@@ -3,7 +3,7 @@ let name_chord =
   fun (root : note) (chord_type : chord) : string ->
     let base_str = Pp.NOTES.FMT.sprint_note root in
     let suffix_str = Conv.chord_to_string chord_type in
-    base_str ^ suffix_str
+    Fmt.str "%s%s" base_str suffix_str
 
 (** [mode_rotation_int mode] takes a mode and returns the number of rotation
     required to find its intervalic formula once applied to the formula of the

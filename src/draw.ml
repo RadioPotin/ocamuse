@@ -152,14 +152,18 @@ module PATTERN = struct
           match note_int with
           | 1 | 4 | 6 | 9 | 11 -> M.stringify M.PLAIN.pp_fret ()
           | _ ->
-            M.stringify M.PLAIN.pp_space () ^ M.stringify M.PLAIN.pp_fret ()
+            Fmt.str "%s%s"
+              (M.stringify M.PLAIN.pp_space ())
+              (M.stringify M.PLAIN.pp_fret ())
         end
         else if i < 10 then begin
           match note_int with
           | 1 | 4 | 6 | 9 | 11 -> M.stringify M.PLAIN.pp_sep ()
           | _ ->
             if should_space then
-              M.stringify M.PLAIN.pp_sep () ^ M.stringify M.PLAIN.pp_sep ()
+              Fmt.str "%s%s"
+                (M.stringify M.PLAIN.pp_sep ())
+                (M.stringify M.PLAIN.pp_sep ())
             else M.stringify M.PLAIN.pp_sep ()
         end
         else begin
@@ -230,9 +234,9 @@ module PATTERN = struct
         update_field struc.cursor_i !i;
         while !i < struc.number_of_frets do
           write_plain_note struc j i;
-          i := !i + 1
+          incr i
         done;
-        j := !j + 1
+        incr j
       done
   end
 
