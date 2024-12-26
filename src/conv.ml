@@ -25,7 +25,7 @@ let base_of_string =
   | 'e' | 'E' -> E
   | 'f' | 'F' -> F
   | 'g' | 'G' -> G
-  | _ -> Fmt.failwith "note_of_string"
+  | _ -> assert false
 
 let note_of_string s =
   let open Types in
