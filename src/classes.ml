@@ -19,14 +19,15 @@ class fretboard_widget ocamuse_context =
     inherit LTerm_widget.t "fretboard"
 
     method! draw ctx _focused =
-      LTerm_draw.clear ctx;
+      let open LTerm_draw in
+      let open LTerm_style in
+      let allocation = self#allocation in
+      draw_frame ctx allocation
+        ~style:{none with background = Some white; foreground = Some white} Light;
       Display.select_view ctx ocamuse_context
       (*
       let open LTerm_draw in
       let open LTerm_style in
-      let open LTerm_geom in
-      let allocation = { row1 = 0; col1 = 0; row2 = 6; col2 = 35 } in
-      let ctx = LTerm_draw.sub ctx allocation in
       let style = { none with foreground = Some white; background = Some white } in
       fill_style ctx style
       *)
@@ -36,7 +37,7 @@ class fretboard_widget ocamuse_context =
         let open LTerm_event in
         let open Types in
         match !(ocamuse_context.display_mode) with
-        | Flat _ -> begin
+        | Flat view -> begin
             match event with
             | Key { code = Up; _ } ->
               (* Blue fretboard *)
@@ -86,6 +87,10 @@ class fretboard_widget ocamuse_context =
                   true
                 | _ -> true
               end
+            | Key { code = Backspace; _ } ->
+              ocamuse_context.display_mode := Flat view;
+              self#queue_draw;
+              true
             | Key { code = Escape; _ } ->
               (* Exit Pattern view *)
               begin
@@ -141,12 +146,121 @@ class fretboard_widget ocamuse_context =
           end )
   end
 
-class frame_board = object (self)
-  inherit LTerm_widget.frame
+class frame_board ocamuse_context =
 
-  initializer
-    self#set_label ~alignment:LTerm_geom.H_align_center " Fretboard view "
-end
+  let allocate_view_ctx ctx ocacont =
+    let open Types in
+    let open LTerm_draw in
+    let open LTerm_geom in
+    let allocate view =
+      let {rows; cols} = size ctx in
+      let center_row = rows / 2 in
+      let center_col = cols / 2 in
+      let number_of_strings = Array.length ocacont.fretboard in
+      let best_effort_print_width =
+        let s_len =
+          Array.length ocamuse_context.fretboard.(0)
+        in
+        s_len * 8 + 3
+      in
+      begin
+        match view with
+        | Plain _ ->
+          let number_of_strings = Array.length ocacont.fretboard in
+          let row1 = max 0 (center_row - number_of_strings / 2) in
+          let row2 = min rows (row1 + number_of_strings) in
+          let col1 = max 0 (center_col - 35 / 2) in
+          let col2 = min cols (col1 + 35) in
+          {
+            row1;
+            row2;
+            col1;
+            col2;
+          }
+        | Fretted _ ->
+          let row1 = max 0 (center_row - number_of_strings / 2) in
+          let row2 = min rows (row1 + number_of_strings) in
+          let col1 = max 0 (center_col - best_effort_print_width / 2) in
+          let col2 = min cols (col1 + best_effort_print_width) in
+          {
+            row1;
+            row2;
+            col1;
+            col2;
+          }
+        | Interline _ ->
+          let best_effort_print_height =
+            let height =
+              number_of_strings * 2 + 2
+            in
+            height (* 1 for bottom padding row + 1 for frets *)
+          in
+          let row1 = max 0 (center_row - best_effort_print_height / 2) in
+          let row2 = min rows (row1 + best_effort_print_height) in
+          let col1 = max 0 (center_col - best_effort_print_width / 2) in
+          let col2 = min cols (col1 + best_effort_print_width) in
+          {
+            row1;
+            row2;
+            col1;
+            col2;
+          }
+      end
+
+    in
+    match !(ocacont.display_mode) with
+    | Flat view ->
+      allocate view
+    | Pattern (view, _mode) ->
+      allocate view
+  in
+
+  object (self)
+    inherit LTerm_widget.frame as super
+
+    val mutable fretboard = new LTerm_widget.t "fretboard_widget"
+
+    val ocamuse_context = ocamuse_context
+
+    method set_fretboard fb =
+      fretboard <- fb;
+      self#set fb (* Assign the widget to the frame *)
+
+    method! draw ctx focused =
+      let open LTerm_draw in
+      let open LTerm_style in
+      clear ctx;
+      let allocation = self#allocation in
+      draw_frame ctx allocation
+        ~style:none Light;
+      let allocation = allocate_view_ctx ctx ocamuse_context  in
+      let sub_ctx = sub ctx allocation in
+      fretboard#draw sub_ctx focused
+
+    val label = new LTerm_widget.label " Fretboard View "
+
+    initializer
+      self#set label;
+      self#on_event (fun event ->
+        let open LTerm_key in
+        match event with
+        | Key { code = Escape; _ } ->
+          (* Signal termination *)
+          super#send_event event;
+          false
+        | Key { code = Up; _ }
+        | Key { code = Left; _ }
+        | Key { code = Right; _ }
+        | Key { code = Prev_page; _ }
+        | Key { code = Next_page; _ }
+        | Key { code = Backspace; _ }
+        | Key { code = Enter; _ } ->
+          (* Propagate the event to the fretboard widget *)
+          fretboard#send_event event;
+          true
+        | _ -> false )
+  end
+
 
 class labeled_frame s = object (self)
   inherit LTerm_widget.frame
@@ -160,23 +274,20 @@ class main_box ocamuse_context wakener =
     inherit LTerm_widget.vbox
 
     val fretboard_widget = new fretboard_widget ocamuse_context
-
-    val fb_frame = new frame_board
-
-    val bottom = new LTerm_widget.vbox
-
-    val up = new labeled_frame "down"
-    val right = new labeled_frame "up"
-
+    val fb_frame = new frame_board ocamuse_context
     val top = new LTerm_widget.vbox
+
+    val down = new labeled_frame "down"
+    val up = new labeled_frame "up"
+    val bottom = new LTerm_widget.vbox
 
     initializer
       (* put fretboard display in white box and on top *)
-      fb_frame#set fretboard_widget;
+      fb_frame#set_fretboard fretboard_widget;
       top#add fb_frame;
       (* Add two widgets beneath *)
-      bottom#add right;
       bottom#add up;
+      bottom#add down;
       (* display top and then bottom part of the screen *)
       self#add top;
       self#add bottom;
@@ -184,7 +295,6 @@ class main_box ocamuse_context wakener =
         let open LTerm_key in
         match event with
         | Key { code = Escape; _ } ->
-          (* Signal termination *)
           Lwt.wakeup wakener ();
           false
         | Key { code = Up; _ }
@@ -195,7 +305,7 @@ class main_box ocamuse_context wakener =
         | Key { code = Backspace; _ }
         | Key { code = Enter; _ } ->
           (* Propagate the event to the fretboard widget *)
-          fretboard_widget#send_event event;
+          fb_frame#send_event event;
           true
         | _ -> false )
   end

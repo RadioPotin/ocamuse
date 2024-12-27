@@ -34,7 +34,7 @@ module LINE = struct
       Pp.FRETBOARD.FMT.stringify_plain_string
         (!(struc.string), !(struc.guitar_string))
     in
-    draw_styled struc.ctx (!(struc.cursor_j) - 1) !(struc.offset)
+    draw_styled struc.ctx (!(struc.cursor_j) - 1) (!(struc.offset) )
       (eval [ B_fg struc.color; S string_line; E_fg ])
 end
 
@@ -84,19 +84,19 @@ module PLAIN = struct
     fun (struc : flat_view_draw_struc) ->
       Array.iteri
         (fun string_nb string ->
-          let offset = !(struc.offset) in
-          if string_nb = 0 then begin
-            let fret_line =
-              Pp.FRETBOARD.FMT.stringify_frets_numbers (string_nb, string)
+            let offset = !(struc.offset) in
+            if string_nb = 0 then begin
+              let fret_line =
+                Pp.FRETBOARD.FMT.stringify_frets_numbers (string_nb, string)
+              in
+              LTerm_draw.draw_styled struc.ctx (offset - 1) offset
+                (eval [ B_fg struc.color; S fret_line; E_fg ])
+            end;
+            let string_line =
+              Pp.FRETBOARD.FMT.stringify_frets (string_nb, string)
             in
-            LTerm_draw.draw_styled struc.ctx (offset - 1) offset
-              (eval [ B_fg struc.color; S fret_line; E_fg ])
-          end;
-          let string_line =
-            Pp.FRETBOARD.FMT.stringify_frets (string_nb, string)
-          in
-          LTerm_draw.draw_styled struc.ctx (string_nb + offset) offset
-            (eval [ B_fg struc.color; S string_line; E_fg ]) )
+            LTerm_draw.draw_styled struc.ctx (string_nb + offset) offset
+              (eval [ B_fg struc.color; S string_line; E_fg ]) )
         struc.fretboard
 end
 
@@ -104,31 +104,31 @@ module PATTERN = struct
   let writerate (struc : Types.pattern_view_draw_struc) style string =
     String.iteri
       (fun i c ->
-        LTerm_draw.draw_char struc.ctx
-          (!(struc.cursor_j) + !(struc.offset))
-          (!(struc.cursor_i) + i + !(struc.offset))
-          (Zed_char.unsafe_of_char c)
-          ~style )
+          LTerm_draw.draw_char struc.ctx
+            (!(struc.cursor_j) + !(struc.offset))
+            (!(struc.cursor_i) + i + !(struc.offset))
+            (Zed_char.unsafe_of_char c)
+            ~style )
       string
 
   let writerate_for_frets (struc : Types.pattern_view_draw_struc) style string =
     String.iteri
       (fun i c ->
-        let j = !(struc.cursor_j) + !(struc.offset) in
-        let off = !(struc.cursor_i) + !(struc.offset) in
-        LTerm_draw.draw_char struc.ctx (j - 1)
-          (i + off - 1)
-          (Zed_char.unsafe_of_char c)
-          ~style )
+          let j = !(struc.cursor_j) + !(struc.offset) in
+          let off = !(struc.cursor_i) + !(struc.offset) in
+          LTerm_draw.draw_char struc.ctx (j - 1)
+            (i + off - 1)
+            (Zed_char.unsafe_of_char c)
+            ~style )
       string
 
   let writerate_for_interlines (struc : Types.pattern_view_draw_struc) style
     string =
     String.iteri
       (fun i c ->
-        let j = !(struc.cursor_j) + !(struc.offset) in
-        let off = !(struc.cursor_i) + !(struc.offset) + i in
-        LTerm_draw.draw_char struc.ctx j off (Zed_char.unsafe_of_char c) ~style )
+          let j = !(struc.cursor_j) + !(struc.offset) in
+          let off = !(struc.cursor_i) + !(struc.offset) + i in
+          LTerm_draw.draw_char struc.ctx j off (Zed_char.unsafe_of_char c) ~style )
       string
 
   let write_note (struc : Types.pattern_view_draw_struc) j i =
@@ -197,7 +197,7 @@ module PATTERN = struct
     let open LTerm_style in
     let module M = Pp.FRETBOARD.FMT in
     let write_before_fret_number (struc : Types.pattern_view_draw_struc) fret_i
-        =
+      =
       let before_spacing = M.stringify M.FRET.NUMBERS.pp_before fret_i in
       let style = { none with foreground = Some struc.color } in
       writerate_for_frets struc style before_spacing;
