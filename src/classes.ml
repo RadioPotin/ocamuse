@@ -19,18 +19,7 @@ class fretboard_widget ocamuse_context =
     inherit LTerm_widget.t "fretboard"
 
     method! draw ctx _focused =
-      let open LTerm_draw in
-      let open LTerm_style in
-      let allocation = self#allocation in
-      draw_frame ctx allocation
-        ~style:{none with background = Some white; foreground = Some white} Light;
       Display.select_view ctx ocamuse_context
-      (*
-      let open LTerm_draw in
-      let open LTerm_style in
-      let style = { none with foreground = Some white; background = Some white } in
-      fill_style ctx style
-      *)
 
     initializer
       self#on_event (fun event ->
@@ -161,7 +150,7 @@ class frame_board ocamuse_context =
         let s_len =
           Array.length ocamuse_context.fretboard.(0)
         in
-        s_len * 8 + 3
+        (s_len - 1 ) * 8 + 4
       in
       begin
         match view with
@@ -179,7 +168,7 @@ class frame_board ocamuse_context =
           }
         | Fretted _ ->
           let row1 = max 0 (center_row - number_of_strings / 2) in
-          let row2 = min rows (row1 + number_of_strings) in
+          let row2 = min rows (row1 + number_of_strings + 1) in
           let col1 = max 0 (center_col - best_effort_print_width / 2) in
           let col2 = min cols (col1 + best_effort_print_width) in
           {
@@ -206,13 +195,30 @@ class frame_board ocamuse_context =
             col2;
           }
       end
-
     in
     match !(ocacont.display_mode) with
     | Flat view ->
       allocate view
     | Pattern (view, _mode) ->
       allocate view
+  in
+
+  let allocate_frame allocation ocacont =
+    let open Types in
+    let open LTerm_geom in
+    let check_view view =
+      match view with
+      | Plain _ ->
+        { row1 = allocation.row1 - 1; row2 = allocation.row2 + 1; col1 = allocation.col1 - 1; col2 = allocation.col2 + 1 }
+      | _ ->
+        { row1 = allocation.row1 - 1; row2 = allocation.row2 + 1; col1 = allocation.col1; col2 = allocation.col2 }
+    in
+    match !(ocacont.display_mode) with
+    | Flat view ->
+      check_view view
+    | Pattern (view, _mode) ->
+      check_view view
+
   in
 
   object (self)
@@ -227,20 +233,17 @@ class frame_board ocamuse_context =
       self#set fb (* Assign the widget to the frame *)
 
     method! draw ctx focused =
-      let open LTerm_draw in
       let open LTerm_style in
-      clear ctx;
-      let allocation = self#allocation in
-      draw_frame ctx allocation
-        ~style:none Light;
-      let allocation = allocate_view_ctx ctx ocamuse_context  in
+      let open LTerm_draw in
+      draw_frame ctx self#allocation  ~style:{none with foreground = Some blue} Light;
+      let allocation = allocate_view_ctx ctx ocamuse_context in
       let sub_ctx = sub ctx allocation in
-      fretboard#draw sub_ctx focused
-
-    val label = new LTerm_widget.label " Fretboard View "
+      fretboard#draw sub_ctx focused;
+      let allocation = allocate_frame allocation ocamuse_context in
+      draw_frame ctx allocation ~style:{ none with foreground = Some white } Light
 
     initializer
-      self#set label;
+      self#set_label ~alignment:H_align_center " f";
       self#on_event (fun event ->
         let open LTerm_key in
         match event with
@@ -266,6 +269,7 @@ class labeled_frame s = object (self)
   inherit LTerm_widget.frame
   val label = new LTerm_widget.label s
   initializer
+    self#set_label ~alignment:H_align_center s;
     self#set label
 end
 

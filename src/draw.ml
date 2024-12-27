@@ -1,4 +1,4 @@
-module LINE = struct
+module FLAT = struct
   open LTerm_text
 
   let write_interline (struc : Types.flat_view_draw_struc) =
@@ -48,7 +48,7 @@ module PLAIN = struct
         update_field struc.string !i;
         update_field struc.guitar_string struc.fretboard.(!i);
         update_field struc.cursor_j (!(struc.cursor_j) + 1);
-        LINE.write_plain_frets struc;
+        FLAT.write_plain_frets struc;
         i := !i + 1
       done
 
@@ -60,20 +60,20 @@ module PLAIN = struct
         update_field struc.cursor_j (!(struc.cursor_j) + 1)
       in
       (* top fret numbers *)
-      LINE.write_fret_numbers struc;
+      FLAT.write_fret_numbers struc;
       move_cursor struc;
       (* interline *)
-      LINE.write_interline struc;
+      FLAT.write_interline struc;
       move_cursor struc;
       let i = ref 0 in
       while !i < struc.number_of_strings do
         update_field struc.guitar_string struc.fretboard.(!i);
         (* frets and notes *)
-        LINE.write_frets struc;
+        FLAT.write_frets struc;
         move_cursor struc;
         update_field struc.string !i;
         (* interline *)
-        LINE.write_interline struc;
+        FLAT.write_interline struc;
         move_cursor struc;
         incr i
       done
