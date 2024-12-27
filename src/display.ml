@@ -31,7 +31,7 @@ let view_flat ctx ocamuse_context event =
 let view_pattern ctx view ocamuse_context mode =
   let open Types in
   let make_pattern_struc ctx mode view notes_to_degree_tbl degree_to_color_tbl
-    ocamuse_context : Types.pattern_view_draw_struc =
+      ocamuse_context : Types.pattern_view_draw_struc =
     let cursor_i = ref 0 in
     let cursor_j = ref 0 in
     let offset_for_frets_numbers =
@@ -73,3 +73,10 @@ let view_pattern ctx view ocamuse_context mode =
     in
     Draw.PATTERN.pattern struc
   end
+
+let select_view ctx ocamuse_context =
+  let open Types in
+  LTerm_draw.clear ctx;
+  match !(ocamuse_context.display_mode) with
+  | Flat mode -> view_flat ctx ocamuse_context mode
+  | Pattern (view, mode) -> view_pattern ctx view ocamuse_context mode

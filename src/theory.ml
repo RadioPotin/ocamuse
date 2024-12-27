@@ -85,9 +85,9 @@ let build_degree_colour_tbl mode =
   let degree_colour_tbl = Hashtbl.create 512 in
   List.iteri
     (fun i _note ->
-      let color = Conv.degree_to_colour i in
-      let color = Color.event_to_color color in
-      Hashtbl.add degree_colour_tbl i color )
+        let color = Conv.degree_to_colour i in
+        let color = Color.event_to_color color in
+        Hashtbl.add degree_colour_tbl i color )
     mode;
   degree_colour_tbl
 
@@ -97,20 +97,27 @@ let is_diatonic struc note =
 
 (*
   TODO:
-    * suite d'accords d'une tonalité donnée  [x]
-    * Fretboard print                        [x]
-      * build patterns to apply to a board   []
-      * create pattern highlighting function [x]
-    * Chord diagrams                         []
-    * Scale degree sequence (progressions)   []
-    * Tabs                                   []
-      * map to fretboard                     []
-      * function to print sequence           []
-      * function to print chords             []
-      * function to print notes              []
-    * Add lambda_term support for
-    interactive experience                   [x]
-    * Markov Chord progressions              []
-    * generer du midi                        []
-    * generer partoche pdf                   []
+    * Add lambda_term support for interactive experience        [x]
+    * display diatonic chord names                              [x]
+    * Fretboard features:
+      * create simple pattern highlighting function for Cmajor  [x]
+      * Navigate all modes of given tonality with highlighting  []
+      * Highlight an arpeggio                                   []
+      * Highlight a path of notes on the fb                     []
+      * input patterns                                          []
+
+    * Chord diagrams                                            []
+      * Display the diatonic chord diagrams                     []
+      * Select a chord, a voicing, and generate the diagram     []
+
+    * Scale degree sequence (progressions)                      []
+      * Select from an array of predefined chord progressions   []
+    * Tabs                                                      []
+      * map to fretboard                                        []
+      * function to print sequence                              []
+      * function to print chords                                []
+      * function to print notes                                 []
+    * Markov Chord progressions                                 []
+    * generate midi                                             []
+    * generate pdf music sheet                                  []
  *)

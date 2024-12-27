@@ -23,10 +23,11 @@
 
 (package
  (name ocamuse)
- (synopsis "OCaml library/executable to TODO")
- (description "ocamuse is an OCaml library/executable to TODO.")
+ (synopsis "A graphical user interface executable")
+ (description
+  "OCAml MUSE is an interactive GUI tool entirely made in OCaml. Its goal is to ease as much as possible the process of learning music theory on guitar on your own.")
  (tags
-  (ocamuse TODO TODO TODO TODO))
+  (ocamuse music interactive graphical gui))
  (depends
   (ocaml
    (>= 4.08))

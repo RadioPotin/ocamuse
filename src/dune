@@ -1,6 +1,6 @@
 (executable
  (public_name ocamuse)
  (libraries lambda-term lwt lwt.unix prelude zed)
- (modules color conv display draw fretboard ocamuse pp theory types)
+ (modules color conv display draw fretboard ocamuse classes pp theory types)
  (flags
   (:standard -open Prelude)))
