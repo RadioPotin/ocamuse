@@ -209,9 +209,26 @@ class frame_board ocamuse_context =
     let check_view view =
       match view with
       | Plain _ ->
-        { row1 = allocation.row1 - 1; row2 = allocation.row2 + 1; col1 = allocation.col1 - 1; col2 = allocation.col2 + 1 }
-      | _ ->
-        { row1 = allocation.row1 - 1; row2 = allocation.row2 + 1; col1 = allocation.col1; col2 = allocation.col2 }
+        {
+          row1 = allocation.row1 - 1;
+          row2 = allocation.row2 + 1;
+          col1 = allocation.col1 - 1;
+          col2 = allocation.col2 + 3
+        }
+      | Fretted _ ->
+        {
+          row1 = allocation.row1 + 1;
+          row2 = allocation.row2 + 2;
+          col1 = allocation.col1 + 1;
+          col2 = allocation.col2 + 1
+        }
+      | Interline _ ->
+        {
+          row1 = allocation.row1 + 1;
+          row2 = allocation.row2;
+          col1 = allocation.col1;
+          col2 = allocation.col2
+        }
     in
     match !(ocacont.display_mode) with
     | Flat view ->
@@ -235,15 +252,19 @@ class frame_board ocamuse_context =
     method! draw ctx focused =
       let open LTerm_style in
       let open LTerm_draw in
+      clear ctx;
+      (* outerframe *)
       draw_frame ctx self#allocation  ~style:{none with foreground = Some blue} Light;
+      (* zone allocation for the fretboard *)
       let allocation = allocate_view_ctx ctx ocamuse_context in
       let sub_ctx = sub ctx allocation in
       fretboard#draw sub_ctx focused;
+      (* frame autour de la fretboard selon la projection *)
       let allocation = allocate_frame allocation ocamuse_context in
-      draw_frame ctx allocation ~style:{ none with foreground = Some white } Light
+      draw_frame ctx allocation ~style:{none with foreground = Some white} Light
 
     initializer
-      self#set_label ~alignment:H_align_center " f";
+      self#set_label ~alignment:H_align_center " fretboard view ";
       self#on_event (fun event ->
         let open LTerm_key in
         match event with

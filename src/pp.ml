@@ -153,6 +153,14 @@ module FRETBOARD = struct
           Fmt.str {|%a%a%a%a%a%a%a|} pp_space_fmt () pp_space_fmt ()
             pp_fret_nb_fmt n pp_space_fmt () pp_space_fmt () pp_space_fmt ()
             pp_space_fmt ()
+
+        let pp_fret_nb_padding_fmt fmt i =
+          if i = 0 then
+            Fmt.pf fmt "%a%a" pp_bar_fmt () pp_sep_fmt ()
+          else
+            Fmt.pf fmt {|%a%a%a%a%a%a%a|} pp_bar_fmt () pp_space_fmt ()
+              pp_space_fmt () pp_space_fmt () pp_space_fmt ()
+              pp_space_fmt () pp_bar_fmt ()
       end
     end
 
@@ -175,9 +183,9 @@ module FRETBOARD = struct
     let fret_print_iteri ~pp_sep ppf pp_v arr range =
       Array.iteri
         (fun i v ->
-          Fmt.pf ppf "%d" (i + 1);
-          pp_v ppf (i, v);
-          if i < range - 1 then pp_sep i ppf () )
+            Fmt.pf ppf "%d" (i + 1);
+            pp_v ppf (i, v);
+            if i < range - 1 then pp_sep i ppf () )
         arr
 
     let iterate_over_plain_string ~pp_sep fmt ppv arr =
@@ -194,8 +202,8 @@ module FRETBOARD = struct
     let fret_print_iteri ~pp_sep ppf pp_v arr range =
       Array.iteri
         (fun i v ->
-          pp_v ppf (i, v);
-          if i < range - 1 then pp_sep i ppf () )
+            pp_v ppf (i, v);
+            if i < range - 1 then pp_sep i ppf () )
         arr
 
     let iterate_over_string ~pp_sep fmt ppv arr =
@@ -210,7 +218,7 @@ module FRETBOARD = struct
     (* ************************************** *)
 
     let print_plain_notes =
-     fun fmt ((fret_nb, (note : Types.note)), string_number) ->
+      fun fmt ((fret_nb, (note : Types.note)), string_number) ->
       let should_space =
         Fretboard.scan_column_for_alterations (fret_nb, string_number)
       in

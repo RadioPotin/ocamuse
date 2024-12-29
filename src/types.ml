@@ -77,17 +77,6 @@ type display =
   | Flat of view
   | Pattern of view * mode
 
-type flat_view_draw_struc =
-  { string : int ref
-  ; offset : int ref
-  ; cursor_j : int ref
-  ; number_of_strings : int
-  ; ctx : LTerm_draw.context
-  ; color : LTerm_style.color
-  ; guitar_string : note array ref
-  ; fretboard : note array array
-  }
-
 type pattern_view_draw_struc =
   { view : view
   ; mode : mode
