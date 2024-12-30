@@ -6,16 +6,16 @@
 
 (license ISC)
 
-(authors "TODO")
+(authors "Dario Pinto <laradiopotin@gmail.com>")
 
-(maintainers "TODO")
+(maintainers "Dario Pinto <laradiopotin@gmail.com>")
 
 (source
- (uri TODO/ocamuse))
+ (uri "https://github.com/RadioPotin/ocamuse"))
 
-(homepage TODO/ocamuse)
+(homepage "404")
 
-(bug_reports TODO/ocamuse)
+(bug_reports "https://github.com/RadioPotin/ocamuse/issues")
 
 (documentation TODO/ocamuse)
 
@@ -25,7 +25,7 @@
  (name ocamuse)
  (synopsis "A graphical user interface executable")
  (description
-  "OCAml MUSE is an interactive GUI tool entirely made in OCaml. Its goal is to ease as much as possible the process of learning music theory on guitar on your own.")
+  "The OCaml Assistant for MUSic Exploration is an interactive GUI tool entirely made in OCaml. Its goal is to ease as much as possible the process of learning music theory on your own. It is based on the lambda-term GUI library - for now only it features a few widgets designed to assist you in learning music theory on a string instruments. E.G.: fretboard display, note patterns and chord diagrams.")
  (tags
   (ocamuse music interactive graphical gui))
  (depends
