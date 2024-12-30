@@ -168,7 +168,7 @@ class frame_board ocamuse_context =
           }
         | Fretted _ ->
           let row1 = max 0 (center_row - number_of_strings / 2) in
-          let row2 = min rows (row1 + number_of_strings + 1) in
+          let row2 = min rows (row1 + number_of_strings + 2) in
           let col1 = max 0 (center_col - best_effort_print_width / 2) in
           let col2 = min cols (col1 + best_effort_print_width) in
           {
@@ -213,12 +213,12 @@ class frame_board ocamuse_context =
           row1 = allocation.row1 - 1;
           row2 = allocation.row2 + 1;
           col1 = allocation.col1 - 1;
-          col2 = allocation.col2 + 3
+          col2 = allocation.col2 + 2
         }
       | Fretted _ ->
         {
           row1 = allocation.row1 + 1;
-          row2 = allocation.row2 + 2;
+          row2 = allocation.row2 + 1;
           col1 = allocation.col1 + 1;
           col2 = allocation.col2 + 1
         }

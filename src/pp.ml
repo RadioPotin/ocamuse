@@ -129,8 +129,7 @@ module FRETBOARD = struct
             pp_space_fmt ()
 
         let pp_before fmt i =
-          if i = 0 then Fmt.pf fmt "%a" pp_space_fmt ()
-          else if i < 10 then Fmt.pf fmt "%a" pp_space_fmt ()
+          if i < 10 then Fmt.pf fmt "%a" pp_space_fmt ()
           else Fmt.pf fmt "%a%a" pp_space_fmt () pp_space_fmt ()
 
         let pp_after fmt i =
@@ -156,11 +155,11 @@ module FRETBOARD = struct
 
         let pp_fret_nb_padding_fmt fmt i =
           if i = 0 then
-            Fmt.pf fmt "%a%a" pp_bar_fmt () pp_sep_fmt ()
+            Fmt.pf fmt "%a%a%a" pp_space_fmt () pp_space_fmt () pp_space_fmt ()
           else
-            Fmt.pf fmt {|%a%a%a%a%a%a%a|} pp_bar_fmt () pp_space_fmt ()
-              pp_space_fmt () pp_space_fmt () pp_space_fmt ()
-              pp_space_fmt () pp_bar_fmt ()
+            Fmt.pf fmt {|%a%a%a%a%a%a%a%a|} pp_space_fmt () pp_space_fmt ()
+              pp_space_fmt () pp_space_fmt () pp_space_fmt () pp_space_fmt ()
+              pp_space_fmt () pp_space_fmt ()
       end
     end
 
