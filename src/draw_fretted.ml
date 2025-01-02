@@ -3,33 +3,35 @@ module FRETTED = struct
     let writerate (struc : Types.pattern_view_draw_struc) style string =
       String.iteri
         (fun i c ->
-            LTerm_draw.draw_char struc.ctx
-              (!(struc.cursor_j) + !(struc.offset))
-              (!(struc.cursor_i) + i + !(struc.offset))
-              (Zed_char.unsafe_of_char c)
-              ~style )
+          LTerm_draw.draw_char struc.ctx
+            (!(struc.cursor_j) + !(struc.offset))
+            (!(struc.cursor_i) + i + !(struc.offset))
+            (Zed_char.unsafe_of_char c)
+            ~style )
         string
 
-    let writerate_for_frets_with_padding (struc : Types.pattern_view_draw_struc) style string =
+    let writerate_for_frets_with_padding (struc : Types.pattern_view_draw_struc)
+      style string =
       String.iteri
         (fun i c ->
-            let j = !(struc.cursor_j) + !(struc.offset) in
-            let off = !(struc.cursor_i) + !(struc.offset) in
-            LTerm_draw.draw_char struc.ctx (j - 2)
-              (i + off - 1)
-              (Zed_char.unsafe_of_char c)
-              ~style )
+          let j = !(struc.cursor_j) + !(struc.offset) in
+          let off = !(struc.cursor_i) + !(struc.offset) in
+          LTerm_draw.draw_char struc.ctx (j - 2)
+            (i + off - 1)
+            (Zed_char.unsafe_of_char c)
+            ~style )
         string
 
-    let writerate_for_padding (struc : Types.pattern_view_draw_struc) style string =
+    let writerate_for_padding (struc : Types.pattern_view_draw_struc) style
+      string =
       String.iteri
         (fun i c ->
-            let j = !(struc.cursor_j) + !(struc.offset) in
-            let off = !(struc.cursor_i) + !(struc.offset) in
-            LTerm_draw.draw_char struc.ctx (j - 1)
-              (i + off - 1)
-              (Zed_char.unsafe_of_char c)
-              ~style )
+          let j = !(struc.cursor_j) + !(struc.offset) in
+          let off = !(struc.cursor_i) + !(struc.offset) in
+          LTerm_draw.draw_char struc.ctx (j - 1)
+            (i + off - 1)
+            (Zed_char.unsafe_of_char c)
+            ~style )
         string
   end
 
@@ -46,8 +48,7 @@ module FRETTED = struct
   let fretted_note (struc : Types.pattern_view_draw_struc) fret_j fret_i =
     let open LTerm_style in
     let module M = Pp.FRETBOARD.FMT in
-    let note = struc.fretboard.(!fret_j).(!fret_i)
-    in
+    let note = struc.fretboard.(!fret_j).(!fret_i) in
     let before_note (struc : Types.pattern_view_draw_struc) fret_i =
       let before_spacing = M.stringify M.FRET.pp_before (fret_i, note) in
       let style = { none with foreground = Some struc.color } in
@@ -69,11 +70,13 @@ module FRETTED = struct
     update_cursor struc @@ after_note struc !fret_i
 
   let fret_numbers_padding (struc : Types.pattern_view_draw_struc) =
-    let module M = Pp.FRETBOARD.FMT
-    in
-    let write_fret_number_padding (struc : Types.pattern_view_draw_struc) fret_i =
+    let module M = Pp.FRETBOARD.FMT in
+    let write_fret_number_padding (struc : Types.pattern_view_draw_struc) fret_i
+        =
       let open LTerm_style in
-      let fret_nb_spacing_string = M.stringify M.FRET.NUMBERS.pp_fret_nb_padding_fmt fret_i in
+      let fret_nb_spacing_string =
+        M.stringify M.FRET.NUMBERS.pp_fret_nb_padding_fmt fret_i
+      in
       let style = { none with bold = Some true; foreground = Some lwhite } in
       WRITE.writerate_for_padding struc style fret_nb_spacing_string;
       fret_nb_spacing_string
@@ -90,10 +93,9 @@ module FRETTED = struct
 
   let padded_fret_numbers (struc : Types.pattern_view_draw_struc) =
     let open LTerm_style in
-    let module M = Pp.FRETBOARD.FMT
-    in
+    let module M = Pp.FRETBOARD.FMT in
     let write_before_fret_number (struc : Types.pattern_view_draw_struc) fret_i
-      =
+        =
       let before_spacing = M.stringify M.FRET.NUMBERS.pp_before fret_i in
       let style = { none with foreground = Some struc.color } in
       WRITE.writerate_for_frets_with_padding struc style before_spacing;

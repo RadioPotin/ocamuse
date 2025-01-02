@@ -1,7 +1,7 @@
 (* Default context initialization *)
 let default_context () =
   let open Types in
-  let standard_tuning = [ A ; E; A; D; G; B; E ] in
+  let standard_tuning = [ A; E; A; D; G; B; E ] in
   let default_tuning () : Types.tuning =
     List.map (fun note -> { base = note; alteration = 0 }) standard_tuning
   in

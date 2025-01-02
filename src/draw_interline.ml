@@ -3,31 +3,34 @@ module INTERLINE = struct
     let writerate (struc : Types.pattern_view_draw_struc) style string =
       String.iteri
         (fun i c ->
-            LTerm_draw.draw_char struc.ctx
-              (!(struc.cursor_j) + !(struc.offset))
-              (!(struc.cursor_i) + i + !(struc.offset))
-              (Zed_char.unsafe_of_char c)
-              ~style )
+          LTerm_draw.draw_char struc.ctx
+            (!(struc.cursor_j) + !(struc.offset))
+            (!(struc.cursor_i) + i + !(struc.offset))
+            (Zed_char.unsafe_of_char c)
+            ~style )
         string
 
     let writerate_for_interlines (struc : Types.pattern_view_draw_struc) style
       string =
       String.iteri
         (fun i c ->
-            let j = !(struc.cursor_j) + !(struc.offset) in
-            let off = !(struc.cursor_i) + !(struc.offset) + i in
-            LTerm_draw.draw_char struc.ctx j off (Zed_char.unsafe_of_char c) ~style )
+          let j = !(struc.cursor_j) + !(struc.offset) in
+          let off = !(struc.cursor_i) + !(struc.offset) + i in
+          LTerm_draw.draw_char struc.ctx j off
+            (Zed_char.unsafe_of_char c)
+            ~style )
         string
 
-    let writerate_for_frets (struc : Types.pattern_view_draw_struc) style string =
+    let writerate_for_frets (struc : Types.pattern_view_draw_struc) style string
+        =
       String.iteri
         (fun i c ->
-            let j = !(struc.cursor_j) + !(struc.offset) in
-            let off = !(struc.cursor_i) + !(struc.offset) in
-            LTerm_draw.draw_char struc.ctx (j - 1)
-              (i + off - 1)
-              (Zed_char.unsafe_of_char c)
-              ~style )
+          let j = !(struc.cursor_j) + !(struc.offset) in
+          let off = !(struc.cursor_i) + !(struc.offset) in
+          LTerm_draw.draw_char struc.ctx (j - 1)
+            (i + off - 1)
+            (Zed_char.unsafe_of_char c)
+            ~style )
         string
   end
 
@@ -44,8 +47,7 @@ module INTERLINE = struct
   let fretted_note (struc : Types.pattern_view_draw_struc) fret_j fret_i =
     let open LTerm_style in
     let module M = Pp.FRETBOARD.FMT in
-    let note = struc.fretboard.(!fret_j).(!fret_i)
-    in
+    let note = struc.fretboard.(!fret_j).(!fret_i) in
     let before_note (struc : Types.pattern_view_draw_struc) fret_i =
       let before_spacing = M.stringify M.FRET.pp_before (fret_i, note) in
       let style = { none with foreground = Some struc.color } in
@@ -93,7 +95,7 @@ module INTERLINE = struct
     let open LTerm_style in
     let module M = Pp.FRETBOARD.FMT in
     let write_before_fret_number (struc : Types.pattern_view_draw_struc) fret_i
-      =
+        =
       let before_spacing = M.stringify M.FRET.NUMBERS.pp_before fret_i in
       let style = { none with foreground = Some struc.color } in
       WRITE.writerate_for_frets struc style before_spacing;
@@ -127,7 +129,6 @@ module INTERLINE = struct
     let i = ref 0 in
     fret_numbers struc;
     while !j < struc.number_of_strings do
-
       (* Iterate over frets and print interline *)
       i := 0;
       update_field struc.cursor_i 0;
