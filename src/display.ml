@@ -5,14 +5,11 @@ let select_view ctx ocamuse_context =
     | Pattern (view, _mode) -> view
   in
   let make_struc ctx mode view notes_to_degree_tbl degree_to_color_tbl
-      ocamuse_context : Types.pattern_view_draw_struc =
+    ocamuse_context : Types.pattern_view_draw_struc =
     let cursor_i = ref 0 in
     let cursor_j = ref 0 in
     let offset_for_frets_numbers =
-      match view with
-      | Plain _ -> 0
-      | Fretted _ -> 2
-      | Interline _ -> 1
+      match view with Plain _ -> 0 | Fretted _ -> 2 | Interline _ -> 1
     in
     let fretboard = ocamuse_context.fretboard in
     let offset = ref offset_for_frets_numbers in
@@ -35,7 +32,9 @@ let select_view ctx ocamuse_context =
     }
   in
   LTerm_draw.clear ctx;
-  let tonality = Theory.build_tonality ocamuse_context.mode { base = C; alteration = 0 } in
+  let tonality =
+    Theory.build_tonality ocamuse_context.mode { base = C; alteration = 0 }
+  in
   (* make table with Types.notes as keys, and int falseas value (key degrees) *)
   let notes_to_degree_tbl = Theory.build_degree_tbl tonality in
   (* make table with int (key degrees) as keys, and Types.color_plain_view_event as value  *)
@@ -45,15 +44,12 @@ let select_view ctx ocamuse_context =
   begin
     match display_mode with
     | Flat _base_colour ->
-
       let struc =
         make_struc ctx C_mode view notes_to_degree_tbl degree_to_colour_tbl
           ocamuse_context
       in
       Draw.PATTERN.pattern struc
-
     | Pattern (view, mode) ->
-
       let struc =
         make_struc ctx mode view notes_to_degree_tbl degree_to_colour_tbl
           ocamuse_context
