@@ -182,9 +182,9 @@ class frame_board ocamuse_context =
     let check_view view =
       match view with
       | Plain _ ->
-        { row1 = allocation.row1 + 1
-        ; row2 = allocation.row2 + 1
-        ; col1 = allocation.col1 + 1
+        { row1 = allocation.row1 - 1
+        ; row2 = allocation.row2 - 1
+        ; col1 = allocation.col1 - 1
         ; col2 = allocation.col2 + 1
         }
       | Fretted _ ->
