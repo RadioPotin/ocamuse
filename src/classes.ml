@@ -267,37 +267,159 @@ class main_box ocamuse_context wakener =
   object (self)
     inherit LTerm_widget.vbox
 
+    val app_state = App_state.make ocamuse_context
+
     val fb_frame = new frame_board ocamuse_context
 
     val top = new LTerm_widget.vbox
 
-    val down = new labeled_frame "down"
+    val mutable help_panel = new Widgets.help_panel (App_state.make ocamuse_context)
 
-    val up = new labeled_frame "up"
+    val mutable context_panel = new Widgets.context_panel ocamuse_context (App_state.make ocamuse_context)
+
+    val mutable selector_widget : LTerm_widget.t option = None
 
     val bottom = new LTerm_widget.hbox
 
+    val bottom_left_frame = new LTerm_widget.frame
+
+    val bottom_right_frame = new LTerm_widget.frame
+
     initializer
-      (* put fretboard display in white box and on top *)
+      (* Create widgets with app_state *)
+      help_panel <- new Widgets.help_panel app_state;
+      context_panel <- new Widgets.context_panel ocamuse_context app_state;
+
+      (* put fretboard display in frame and on top *)
       top#add fb_frame;
-      (* Add two widgets beneath *)
-      bottom#add up;
-      bottom#add down;
+
+      (* Bottom layout: help on left (in frame), context on right (in frame) *)
+      bottom_left_frame#set (help_panel :> LTerm_widget.t);
+      bottom_right_frame#set (context_panel :> LTerm_widget.t);
+      bottom#add ~expand:true bottom_left_frame;
+      bottom#add ~expand:true bottom_right_frame;
+
       (* display top and then bottom part of the screen *)
       self#add top;
       self#add bottom;
+
       self#on_event (fun event ->
         let open LTerm_key in
-        match event with
-        | Key { code = Escape; _ } ->
-          Lwt.wakeup wakener ();
-          false
-        | Key { code = Prev_page; _ }
-        | Key { code = Next_page; _ }
-        | Key { code = Backspace; _ }
-        | Key { code = Enter; _ } ->
-          (* Propagate the event to the fretboard widget *)
-          fb_frame#send_event event;
-          true
-        | _ -> false )
+        let open LTerm_event in
+
+        (* Route events based on app state *)
+        match !(app_state.mode) with
+        | App_state.Normal -> begin
+          match event with
+          | Key { code = Escape; _ } ->
+            Lwt.wakeup wakener ();
+            false
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code '?' || Uchar.to_int c = Char.code 'h' ->
+            if !(app_state.help_visible) then
+              App_state.exit_help app_state
+            else
+              App_state.enter_help app_state;
+            self#queue_draw;
+            true
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 't' ->
+            App_state.enter_tonality_selection app_state;
+            (* Show tonality selector widget *)
+            (match !(app_state.mode) with
+            | App_state.TonalitySelection tstate ->
+              let widget = new Selectors.tonality_selector_widget tstate app_state in
+              bottom_left_frame#set (widget :> LTerm_widget.t);
+              selector_widget <- Some (widget :> LTerm_widget.t)
+            | _ -> ());
+            self#queue_draw;
+            true
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'u' ->
+            App_state.enter_tuning_selection app_state;
+            (* Show tuning selector widget *)
+            (match !(app_state.mode) with
+            | App_state.TuningSelection tstate ->
+              let widget = new Selectors.tuning_selector_widget tstate app_state in
+              bottom_left_frame#set (widget :> LTerm_widget.t);
+              selector_widget <- Some (widget :> LTerm_widget.t)
+            | _ -> ());
+            self#queue_draw;
+            true
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'd' ->
+            (* Toggle debug mode *)
+            App_state.toggle_debug app_state;
+            self#queue_draw;
+            true
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'm' ->
+            (* Cycle through modes *)
+            let next_mode = match ocamuse_context.mode with
+              | Types.C_mode -> Types.D_mode
+              | Types.D_mode -> Types.E_mode
+              | Types.E_mode -> Types.F_mode
+              | Types.F_mode -> Types.G_mode
+              | Types.G_mode -> Types.A_mode
+              | Types.A_mode -> Types.B_mode
+              | Types.B_mode -> Types.C_mode
+            in
+            ocamuse_context.mode <- next_mode;
+            self#queue_draw;
+            true
+          | Key { code = Tab; _ } ->
+            App_state.cycle_focus app_state;
+            self#queue_draw;
+            true
+          | Key { code = Prev_page; _ }
+          | Key { code = Next_page; _ }
+          | Key { code = Backspace; _ }
+          | Key { code = Enter; _ } ->
+            (* Propagate to fretboard widget *)
+            fb_frame#send_event event;
+            true
+          | _ -> false
+        end
+
+        | App_state.TonalitySelection _ ->
+          if Selectors.handle_tonality_input app_state event then begin
+            (* Update selector widget with new state *)
+            (match !(app_state.mode) with
+            | App_state.TonalitySelection tstate ->
+              let widget = new Selectors.tonality_selector_widget tstate app_state in
+              bottom_left_frame#set (widget :> LTerm_widget.t)
+            | App_state.Normal ->
+              (* Selection complete, restore help panel *)
+              bottom_left_frame#set (help_panel :> LTerm_widget.t);
+              selector_widget <- None
+            | _ -> ());
+            self#queue_draw;
+            true
+          end
+          else false
+
+        | App_state.TuningSelection _ ->
+          if Selectors.handle_tuning_input app_state event then begin
+            (* Update selector widget with new state *)
+            (match !(app_state.mode) with
+            | App_state.TuningSelection tstate ->
+              let widget = new Selectors.tuning_selector_widget tstate app_state in
+              bottom_left_frame#set (widget :> LTerm_widget.t)
+            | App_state.Normal ->
+              (* Selection complete, restore help panel and redraw fretboard *)
+              bottom_left_frame#set (help_panel :> LTerm_widget.t);
+              selector_widget <- None;
+              fb_frame#queue_draw
+            | _ -> ());
+            self#queue_draw;
+            true
+          end
+          else false
+
+        | _ ->
+          (* Other modes: Escape returns to normal *)
+          match event with
+          | Key { code = Escape; _ } ->
+            App_state.return_to_normal app_state;
+            bottom_left_frame#set (help_panel :> LTerm_widget.t);
+            selector_widget <- None;
+            self#queue_draw;
+            true
+          | _ -> false
+      )
   end

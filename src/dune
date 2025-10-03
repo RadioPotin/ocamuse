@@ -2,6 +2,7 @@
  (public_name ocamuse)
  (libraries lambda-term lwt lwt.unix zed fmt)
  (modules
+  app_state
   color
   config
   conv
@@ -15,5 +16,7 @@
   ocamuse
   classes
   pp
+  selectors
   theory
-  types))
+  types
+  widgets))

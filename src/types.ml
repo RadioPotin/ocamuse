@@ -105,9 +105,9 @@ type pattern_view_draw_struc =
 
 type ocamuse_structure =
   { display_mode : display ref
-  ; fretboard : fretboard_data
+  ; mutable fretboard : fretboard_data
   ; base_colour : base_colour ref
-  ; tuning : tuning
-  ; root_note : note
-  ; mode : mode
+  ; mutable tuning : tuning
+  ; mutable root_note : note
+  ; mutable mode : mode
   }
