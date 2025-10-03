@@ -54,7 +54,8 @@ class fretboard_widget ocamuse_context =
                 ocamuse_context.display_mode := Flat (Plain color)
               | Flat (Interline color) ->
                 ocamuse_context.display_mode := Flat (Fretted color)
-              | Pattern _ -> assert false
+              | Pattern _ -> ()
+                (* Unreachable: outer match already filters for Flat view *)
             end;
             self#queue_draw;
             true
@@ -87,7 +88,8 @@ class fretboard_widget ocamuse_context =
                 ocamuse_context.display_mode := Pattern (Plain color, mode)
               | Pattern (Interline color, mode) ->
                 ocamuse_context.display_mode := Pattern (Fretted color, mode)
-              | Flat _ -> assert false
+              | Flat _ -> ()
+                (* Unreachable: outer match already filters for Pattern view *)
             end;
             self#queue_draw;
             true
@@ -125,20 +127,20 @@ class frame_board ocamuse_context =
         match view with
         | Plain _ ->
           let best_effort_print_width =
-            let s_len = Array.length ocamuse_context.fretboard.(0) in
+            let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
             ((s_len - 1) * 3) + 3
             (* number of frets minus 0th * the plain spacing by fret + length of fret 0 *)
           in
-          let number_of_strings = Array.length ocacont.fretboard in
+          let number_of_strings = Array.length ocacont.fretboard.notes in
           let row1 = max 0 (center_row - (number_of_strings / 2)) in
           let row2 = min rows (row1 + number_of_strings + 2) in
           let col1 = max 0 (center_col - (best_effort_print_width / 2)) in
           let col2 = min cols (col1 + best_effort_print_width) in
           { row1; row2; col1; col2 }
         | Fretted _ ->
-          let number_of_strings = Array.length ocacont.fretboard in
+          let number_of_strings = Array.length ocacont.fretboard.notes in
           let best_effort_print_width =
-            let s_len = Array.length ocamuse_context.fretboard.(0) in
+            let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
             ((s_len - 1) * 8) + 4
             (* number of frets minus 0th * the fretted spacing by fret + length of fret 0 *)
           in
@@ -148,13 +150,13 @@ class frame_board ocamuse_context =
           let col2 = min cols (col1 + best_effort_print_width) in
           { row1; row2; col1; col2 }
         | Interline _ ->
-          let number_of_strings = Array.length ocacont.fretboard in
+          let number_of_strings = Array.length ocacont.fretboard.notes in
           let best_effort_print_height =
             (number_of_strings * 2) + 1 + 1
             (* number of strings * the interline spacing + top spacing after fret nb + bottom spacing after string 1 *)
           in
           let best_effort_print_width =
-            let s_len = Array.length ocamuse_context.fretboard.(0) in
+            let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
             ((s_len - 1) * 8) + 4
             (* number of frets minus 0th * the interline spacing by fret + length of fret 0 *)
           in

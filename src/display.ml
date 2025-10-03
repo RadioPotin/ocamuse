@@ -11,11 +11,11 @@ let select_view ctx ocamuse_context =
     let offset_for_frets_numbers =
       match view with Plain _ -> 0 | Fretted _ -> 2 | Interline _ -> 1
     in
-    let fretboard = ocamuse_context.fretboard in
+    let fretboard = ocamuse_context.fretboard.notes in
     let offset = ref offset_for_frets_numbers in
-    let number_of_strings = Array.length ocamuse_context.fretboard in
+    let number_of_strings = Array.length ocamuse_context.fretboard.notes in
     let color = Color.event_to_base_color !(ocamuse_context.base_colour) in
-    let number_of_frets = Array.length ocamuse_context.fretboard.(0) in
+    let number_of_frets = Array.length ocamuse_context.fretboard.notes.(0) in
     { ctx
     ; mode
     ; view

@@ -1,3 +1,8 @@
+type parse_error =
+  | InvalidCharacter of char
+  | InvalidNoteRange of int
+  | InvalidMode of string
+
 type mode =
   | C_mode
   | D_mode
@@ -73,6 +78,11 @@ type view =
 
 type fretboard = (int * note array) array
 
+type fretboard_data =
+  { notes : note array array
+  ; coord_lookup : (int * int, note) Hashtbl.t
+  }
+
 type display =
   | Flat of view
   | Pattern of view * mode
@@ -95,7 +105,7 @@ type pattern_view_draw_struc =
 
 type ocamuse_structure =
   { display_mode : display ref
-  ; fretboard : note array array
+  ; fretboard : fretboard_data
   ; base_colour : base_colour ref
   ; tuning : tuning
   ; root_note : note

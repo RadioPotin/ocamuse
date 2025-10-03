@@ -78,5 +78,4 @@ let random_base_colour =
     | 0 -> Lblack
     | 1 -> Black
     | 2 -> White
-    | 3 -> Lwhite
-    | _n -> assert false
+    | _ -> Lwhite

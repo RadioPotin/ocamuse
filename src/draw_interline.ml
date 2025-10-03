@@ -1,37 +1,23 @@
 module INTERLINE = struct
   module WRITE = struct
     let writerate (struc : Types.pattern_view_draw_struc) style string =
-      String.iteri
-        (fun i c ->
-          LTerm_draw.draw_char struc.ctx
-            (!(struc.cursor_j) + !(struc.offset))
-            (!(struc.cursor_i) + i + !(struc.offset))
-            (Zed_char.unsafe_of_char c)
-            ~style )
-        string
+      Draw_primitives.draw_string struc.ctx
+        (!(struc.cursor_j) + !(struc.offset))
+        (!(struc.cursor_i) + !(struc.offset))
+        Draw_primitives.Standard style string
 
     let writerate_for_interlines (struc : Types.pattern_view_draw_struc) style
       string =
-      String.iteri
-        (fun i c ->
-          let j = !(struc.cursor_j) + !(struc.offset) in
-          let off = !(struc.cursor_i) + !(struc.offset) + i in
-          LTerm_draw.draw_char struc.ctx j off
-            (Zed_char.unsafe_of_char c)
-            ~style )
-        string
+      Draw_primitives.draw_string struc.ctx
+        (!(struc.cursor_j) + !(struc.offset))
+        (!(struc.cursor_i) + !(struc.offset))
+        Draw_primitives.ForInterlines style string
 
-    let writerate_for_frets (struc : Types.pattern_view_draw_struc) style string
-        =
-      String.iteri
-        (fun i c ->
-          let j = !(struc.cursor_j) + !(struc.offset) in
-          let off = !(struc.cursor_i) + !(struc.offset) in
-          LTerm_draw.draw_char struc.ctx (j - 1)
-            (i + off - 1)
-            (Zed_char.unsafe_of_char c)
-            ~style )
-        string
+    let writerate_for_frets (struc : Types.pattern_view_draw_struc) style string =
+      Draw_primitives.draw_string struc.ctx
+        (!(struc.cursor_j) + !(struc.offset))
+        (!(struc.cursor_i) + !(struc.offset))
+        Draw_primitives.WithPadding style string
   end
 
   let write_note (struc : Types.pattern_view_draw_struc) j i =

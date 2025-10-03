@@ -216,10 +216,10 @@ module FRETBOARD = struct
     (*         display notes plainly          *)
     (* ************************************** *)
 
-    let print_plain_notes =
+    let print_plain_notes coord_tbl =
      fun fmt ((fret_nb, (note : Types.note)), string_number) ->
       let should_space =
-        Fretboard.scan_column_for_alterations (fret_nb, string_number)
+        Fretboard.scan_column_for_alterations coord_tbl (fret_nb, string_number)
       in
       let note_int = Conv.note_to_int note in
       let plain_note =
@@ -246,16 +246,16 @@ module FRETBOARD = struct
       in
       Fmt.pf fmt "%s" plain_note
 
-    let print_plain_frets fmt (string_nb, string) =
+    let print_plain_frets coord_tbl fmt (string_nb, string) =
       iterate_over_string
         ~pp_sep:(fun _string_nb fmt () -> Fmt.pf fmt "")
         fmt
-        (fun fmt arg -> print_plain_notes fmt (arg, string_nb))
+        (fun fmt arg -> print_plain_notes coord_tbl fmt (arg, string_nb))
         string;
       Fmt.pf fmt "@\n"
 
-    let stringify_plain_string guitar_string =
-      stringify print_plain_frets guitar_string
+    let stringify_plain_string coord_tbl guitar_string =
+      stringify (print_plain_frets coord_tbl) guitar_string
 
     (* ************************************** *)
     (* ************************************** *)

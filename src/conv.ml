@@ -15,42 +15,46 @@ let chord_to_string =
     | Sixth -> "6"
     | MinorSixth -> "m6"
 
-let base_of_string =
+let base_of_char =
   let open Types in
   function
-  | 'a' | 'A' -> A
-  | 'b' | 'B' -> B
-  | 'c' | 'C' -> C
-  | 'd' | 'D' -> D
-  | 'e' | 'E' -> E
-  | 'f' | 'F' -> F
-  | 'g' | 'G' -> G
-  | _ -> assert false
+  | 'a' | 'A' -> Ok A
+  | 'b' | 'B' -> Ok B
+  | 'c' | 'C' -> Ok C
+  | 'd' | 'D' -> Ok D
+  | 'e' | 'E' -> Ok E
+  | 'f' | 'F' -> Ok F
+  | 'g' | 'G' -> Ok G
+  | c -> Error (InvalidCharacter c)
 
-let note_of_string s =
+let note_of_string s : (Types.note, Types.parse_error) result =
   let open Types in
-  if String.length s < 2 then
-    let base = base_of_string s.[0] in
-    { base; alteration = 0 }
+  if String.length s < 1 then Error (InvalidCharacter ' ')
+  else if String.length s < 2 then
+    match base_of_char s.[0] with
+    | Ok base -> Ok { base; alteration = 0 }
+    | Error e -> Error e
   else
-    let base = base_of_string s.[0] in
-    let sub = String.sub s 1 (String.length s - 1) in
-    let alteration =
-      match int_of_string sub with None -> assert false | Some s -> s
-    in
-    { base; alteration }
+    match base_of_char s.[0] with
+    | Error e -> Error e
+    | Ok base ->
+      let sub = String.sub s 1 (String.length s - 1) in
+      (try
+        let alteration = int_of_string sub in
+        Ok { base; alteration }
+      with Failure _ -> Error (InvalidCharacter s.[1]))
 
-let mode_of_string =
+let mode_of_string s : (Types.mode, Types.parse_error) result =
   let open Types in
-  function
-  | "A" | "a" -> A_mode
-  | "B" | "b" -> B_mode
-  | "C" | "c" -> C_mode
-  | "D" | "d" -> D_mode
-  | "E" | "e" -> E_mode
-  | "F" | "f" -> F_mode
-  | "G" | "g" -> G_mode
-  | _ -> assert false
+  match s with
+  | "A" | "a" -> Ok A_mode
+  | "B" | "b" -> Ok B_mode
+  | "C" | "c" -> Ok C_mode
+  | "D" | "d" -> Ok D_mode
+  | "E" | "e" -> Ok E_mode
+  | "F" | "f" -> Ok F_mode
+  | "G" | "g" -> Ok G_mode
+  | _ -> Error (InvalidMode s)
 
 let note_to_int =
   let open Types in
@@ -67,7 +71,12 @@ let note_to_int =
   | { base = F; alteration = 1 } | { base = G; alteration = -1 } -> 9
   | { base = G; alteration = 0 } -> 10
   | { base = G; alteration = 1 } | { base = A; alteration = -1 } -> 11
-  | _ -> assert false
+  | note ->
+    (* For other alterations, calculate modulo 12 *)
+    let base_int = match note.base with
+      | A -> 0 | B -> 2 | C -> 3 | D -> 5 | E -> 7 | F -> 8 | G -> 10
+    in
+    (base_int + note.alteration) mod 12
 
 type alt =
   | Sharp

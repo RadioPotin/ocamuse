@@ -14,8 +14,8 @@ depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "4.08"}
   "lwt" {>= "5.7.0"}
-  "prelude"
   "zed" {>= "3.2.3"}
+  "fmt"
   "odoc" {with-doc}
 ]
 build: [

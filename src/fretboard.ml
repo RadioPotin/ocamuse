@@ -21,48 +21,39 @@ let get_next_fret_note open_string fret =
   let note_id = Conv.note_to_int open_string + fret in
   Conv.int_to_note Sharp note_id
 
-let coord_to_note_tbl = ref @@ Hashtbl.create 512
-
-let register nb_s range open_note =
+let register_and_map_string coord_tbl nb_s range open_note =
   let note = ref open_note in
   for fret_number = 0 to range - 1 do
-    Hashtbl.replace !coord_to_note_tbl (fret_number, nb_s) !note;
+    Hashtbl.replace coord_tbl (fret_number, nb_s) !note;
     note := get_next_fret_note open_note fret_number
-  done
-
-let map nb_s range open_note =
+  done;
   Array.init (range - 1) (fun i ->
-    match Hashtbl.find_opt !coord_to_note_tbl (i + 1, nb_s) with
+    match Hashtbl.find_opt coord_tbl (i + 1, nb_s) with
     | None -> open_note
     | Some note -> note )
-
-let register_and_map_string nb_s range open_note =
-  register nb_s range open_note;
-  map nb_s range open_note
-
-let init_string =
-  let open Types in
-  fun (guitar_str_nb : int) (range : int) (open_string : note) : note array ->
-    register_and_map_string guitar_str_nb range open_string
 
 let init =
   let open Types in
   (* range is the number of frets on the board *)
   (* tuning is a list of notes to start a string from *)
-  fun ~(tuning : tuning) ?(range : int = 13) () : note array array ->
-    mapi_down_strings
-      (fun guitar_str_nb open_string ->
-        init_string guitar_str_nb range open_string )
-      tuning
+  fun ~(tuning : tuning) ?(range : int = 13) () : fretboard_data ->
+    let coord_tbl = Hashtbl.create 512 in
+    let notes =
+      mapi_down_strings
+        (fun guitar_str_nb open_string ->
+          register_and_map_string coord_tbl guitar_str_nb range open_string )
+        tuning
+    in
+    { notes; coord_lookup = coord_tbl }
 
-let scan_column_for_alterations (fret_nb, _string_nb) =
+let scan_column_for_alterations coord_tbl (fret_nb, _string_nb) =
   let is_in_bound k =
-    match Hashtbl.find_opt !coord_to_note_tbl k with
+    match Hashtbl.find_opt coord_tbl k with
     | None -> false
     | Some _note -> true
   in
   let set_alteration_flag flag key =
-    let note = Hashtbl.find !coord_to_note_tbl key in
+    let (note : Types.note) = Hashtbl.find coord_tbl key in
     flag := note.alteration <> 0 || not !flag
   in
   let string_nb = ref 1 in
