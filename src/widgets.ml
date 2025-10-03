@@ -79,6 +79,24 @@ class context_panel (ocamuse_ctx : Types.ocamuse_structure) (app_state : App_sta
 
         incr row;
 
+        (* Highlight source *)
+        let highlight_str = match ocamuse_ctx.highlight_source with
+          | Types.Tonality (_, _) -> "Highlighting: Tonality"
+          | Types.Chord (root, chord_type) ->
+              let chord_name = Theory.name_chord root chord_type in
+              Fmt.str "Highlighting: Chord (%s)" chord_name
+          | Types.Arpeggio (root, chord_type) ->
+              let chord_name = Theory.name_chord root chord_type in
+              Fmt.str "Highlighting: Arpeggio (%s)" chord_name
+        in
+        draw_line highlight_str { none with foreground = Some lcyan };
+
+        (* Color theme *)
+        let theme_str = Fmt.str "Color Theme: %s" (Color_theme.theme_name ocamuse_ctx.color_theme) in
+        draw_line theme_str { none with foreground = Some lmagenta };
+
+        incr row;
+
         (* Diatonic chords *)
         draw_line "Diatonic Chords:" { none with bold = Some true; foreground = Some lmagenta };
         let chords = Theory.build_diatonic_triads_sequence ocamuse_ctx.mode ocamuse_ctx.root_note in
@@ -115,7 +133,7 @@ class context_panel (ocamuse_ctx : Types.ocamuse_structure) (app_state : App_sta
     method! can_focus = false
   end
 
-(** Help panel - displays keyboard shortcuts *)
+(** Help panel - displays quick help info *)
 class help_panel (app_state : App_state.t) =
   object
     inherit LTerm_widget.t "help_panel"
@@ -146,60 +164,96 @@ class help_panel (app_state : App_state.t) =
         in
 
         (* Title *)
-        draw_line "KEYBOARD SHORTCUTS"
-          { none with bold = Some true; foreground = Some lcyan };
+        draw_line "HELP" { none with bold = Some true; foreground = Some lcyan };
         incr row;
 
-        (* Mode-specific shortcuts *)
-        begin match !(app_state.mode) with
-        | App_state.Normal ->
-          draw_line "Navigation:" { none with bold = Some true; foreground = Some lyellow };
-          draw_line "  PgUp/PgDn  - Change color" { none with foreground = Some white };
-          draw_line "  Enter      - Cycle view mode" { none with foreground = Some white };
-          draw_line "  Tab        - Cycle focus" { none with foreground = Some white };
-          incr row;
-          draw_line "Modes:" { none with bold = Some true; foreground = Some lyellow };
-          draw_line "  ?/h        - Toggle this help" { none with foreground = Some white };
-          draw_line "  t          - Change tonality" { none with foreground = Some white };
-          draw_line "  u          - Change tuning" { none with foreground = Some white };
-          draw_line "  c          - Chord diagrams" { none with foreground = Some white };
-          draw_line "  a          - Arpeggio mode" { none with foreground = Some white };
-          draw_line "  p          - Progression builder" { none with foreground = Some white };
-          draw_line "  m          - Cycle modes" { none with foreground = Some white };
-          draw_line "  d          - Toggle debug borders" { none with foreground = Some white };
-          incr row;
-          draw_line "  Escape     - Exit" { none with foreground = Some lred }
+        (* Show current mode *)
+        let mode_str = App_state.mode_name app_state in
+        draw_line (Fmt.str "Current Mode: %s" mode_str)
+          { none with bold = Some true; foreground = Some lgreen };
+        incr row;
 
-        | App_state.TonalitySelection _ ->
-          draw_line "Tonality Selection:" { none with bold = Some true; foreground = Some lyellow };
-          draw_line "  a-g        - Select root note" { none with foreground = Some white };
-          draw_line "  #/b        - Add sharp/flat" { none with foreground = Some white };
-          draw_line "  1-7        - Select mode" { none with foreground = Some white };
-          draw_line "  Enter      - Confirm" { none with foreground = Some lgreen };
-          draw_line "  Escape     - Cancel" { none with foreground = Some lred }
+        (* Quick help message *)
+        draw_line "Press '?' or 'h' to view all keybindings"
+          { none with foreground = Some lyellow };
+        incr row;
 
-        | App_state.TuningSelection _ ->
-          draw_line "Tuning Selection:" { none with bold = Some true; foreground = Some lyellow };
-          draw_line "  1-5        - Select preset" { none with foreground = Some white };
-          draw_line "  ↑/↓        - Navigate" { none with foreground = Some white };
-          draw_line "  Enter      - Confirm" { none with foreground = Some lgreen };
-          draw_line "  Escape     - Cancel" { none with foreground = Some lred }
-
-        | App_state.ChordMode _ ->
-          draw_line "Chord Mode:" { none with bold = Some true; foreground = Some lyellow };
-          draw_line "  1-7        - Select chord" { none with foreground = Some white };
-          draw_line "  ←/→        - Change voicing" { none with foreground = Some white };
-          draw_line "  Space      - Toggle all positions" { none with foreground = Some white };
-          draw_line "  Escape     - Exit mode" { none with foreground = Some lred }
-
-        | _ ->
-          draw_line (Fmt.str "Mode: %s" (App_state.mode_name app_state))
-            { none with foreground = Some lwhite };
-          draw_line "  Escape     - Return to normal" { none with foreground = Some lred }
-        end
+        (* Essential shortcuts only *)
+        draw_line "Essential:" { none with bold = Some true; foreground = Some lmagenta };
+        draw_line "  ?/h        - Keybindings modal" { none with foreground = Some white };
+        draw_line "  r          - Reset highlighting" { none with foreground = Some white };
+        draw_line "  Escape     - Exit/Cancel" { none with foreground = Some lred }
 
     method! can_focus = false
   end
+
+(** Keybindings modal - displays all keyboard shortcuts in a centered modal *)
+class keybindings_modal pop_layer_fn =
+  object (self)
+    inherit LTerm_widget.modal_frame
+
+    initializer
+      let vbox = new LTerm_widget.vbox in
+      self#set vbox;
+
+      (* Handle ? and h to close modal *)
+      self#on_event (fun event ->
+        let open LTerm_event in
+        match event with
+        | Key { code = Char c; _ } when Uchar.to_int c = Char.code '?' || Uchar.to_int c = Char.code 'h' ->
+          pop_layer_fn ();
+          true
+        | _ -> false
+      );
+
+      let draw_line text =
+        let label = new LTerm_widget.label text in
+        vbox#add label
+      in
+
+      (* Title *)
+      draw_line "=== KEYBOARD SHORTCUTS ===";
+      vbox#add (new LTerm_widget.hline);
+
+      (* Global shortcuts *)
+      draw_line "Global:";
+      draw_line "  ?/h - Toggle this modal";
+      draw_line "  r - Reset highlighting";
+      draw_line "  Esc - Exit/Cancel";
+      vbox#add (new LTerm_widget.hline);
+
+      (* Navigation *)
+      draw_line "Navigation:";
+      draw_line "  PgUp/Dn - Change color";
+      draw_line "  Enter - Cycle view";
+      draw_line "  Tab - Cycle focus";
+      vbox#add (new LTerm_widget.hline);
+
+      (* Mode selection *)
+      draw_line "Modes:";
+      draw_line "  t - Change tonality";
+      draw_line "  u - Change tuning";
+      draw_line "  c - Chord diagrams";
+      draw_line "  a - Arpeggio mode";
+      draw_line "  m - Cycle modes";
+      draw_line "  k - Color theme";
+      draw_line "  d - Debug borders";
+      vbox#add (new LTerm_widget.hline);
+
+      (* Mode-specific *)
+      draw_line "Chord Mode:";
+      draw_line "  1-7 - Select chord";
+      draw_line "  i - Inversion";
+      draw_line "  v - Voicing";
+      vbox#add (new LTerm_widget.hline);
+
+      draw_line "Arpeggio Mode:";
+      draw_line "  1-7 - Select chord";
+      vbox#add (new LTerm_widget.hline);
+
+      draw_line "Press ? or h to close"
+  end
+
 
 (** Simple status line widget *)
 class status_line message =

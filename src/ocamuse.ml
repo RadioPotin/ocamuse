@@ -13,25 +13,23 @@ let default_context ?(tuning = Config.default_tuning ()) () =
   ; tuning
   ; root_note
   ; mode = C_mode
+  ; highlight_source = Tonality (C_mode, root_note)
+  ; color_theme = CustomPalette "Circle of Fifths"
   }
 
-(*
-  TODO:
-    * Make context menu in half of bottom-right pane, show:
-      * Current mode
-      * Current tonality
-      * Tuning
-      *
- *)
 let run ?(tuning = Config.default_tuning ()) () =
   let open Lwt in
-  let waiter, wakener = wait () in
   let ocamuse_context = default_context ~tuning () in
-  let main_box = new Classes.main_box ocamuse_context wakener in
+
+  (* Use lambda-term's layer system for modals *)
+  let do_run, push_layer, pop_layer, exit = LTerm_widget.prepare_simple_run () in
+  let main_box = new Classes.main_box ocamuse_context exit push_layer pop_layer in
 
   Lazy.force LTerm.stdout >>= fun term ->
   Lwt.finalize
-    (fun () -> LTerm_widget.run term main_box waiter)
+    (fun () ->
+      LTerm.enable_mouse term >>= fun () ->
+      do_run main_box)
     (fun () -> LTerm.disable_mouse term)
 
 let () = Lwt_main.run (run ())

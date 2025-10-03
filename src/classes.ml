@@ -1,8 +1,3 @@
-module MENU = struct
-  let _menu_message =
-    {| Use arrow keys to change view mode - Page Up / Page Down for color change - Enter for Pattern view - Escape to return |}
-end
-
 let update_color rotate =
   let open Types in
   function
@@ -263,7 +258,7 @@ class labeled_frame s =
     initializer self#set_label ~alignment:H_align_center s
   end
 
-class main_box ocamuse_context wakener =
+class main_box ocamuse_context exit push_layer pop_layer =
   object (self)
     inherit LTerm_widget.vbox
 
@@ -276,8 +271,6 @@ class main_box ocamuse_context wakener =
     val mutable help_panel = new Widgets.help_panel (App_state.make ocamuse_context)
 
     val mutable context_panel = new Widgets.context_panel ocamuse_context (App_state.make ocamuse_context)
-
-    val mutable selector_widget : LTerm_widget.t option = None
 
     val bottom = new LTerm_widget.hbox
 
@@ -307,19 +300,43 @@ class main_box ocamuse_context wakener =
         let open LTerm_key in
         let open LTerm_event in
 
+        (* Global handlers that work in any mode *)
+        match event with
+        | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'r' ->
+          (* Reset to tonality highlighting *)
+          ocamuse_context.highlight_source <- Types.Tonality (ocamuse_context.mode, ocamuse_context.root_note);
+          let view = match !(ocamuse_context.display_mode) with
+            | Types.Flat v -> v
+            | Types.Pattern (v, _) -> v
+          in
+          ocamuse_context.display_mode := Types.Pattern (view, ocamuse_context.mode);
+          self#queue_draw;
+          true
+        | Key { code = Char c; _ } when Uchar.to_int c = Char.code '?' || Uchar.to_int c = Char.code 'h' ->
+          if !(app_state.keybindings_modal_visible) then begin
+            (* Already visible, close it *)
+            App_state.toggle_keybindings_modal app_state;
+            pop_layer ();
+            true
+          end else begin
+            (* Not visible, open it *)
+            App_state.toggle_keybindings_modal app_state;
+            let close_fn () =
+              App_state.toggle_keybindings_modal app_state;
+              pop_layer ()
+            in
+            let modal = new Widgets.keybindings_modal close_fn in
+            (push_layer modal) ();
+            true
+          end
+        | _ ->
+
         (* Route events based on app state *)
         match !(app_state.mode) with
         | App_state.Normal -> begin
           match event with
           | Key { code = Escape; _ } ->
-            Lwt.wakeup wakener ();
-            false
-          | Key { code = Char c; _ } when Uchar.to_int c = Char.code '?' || Uchar.to_int c = Char.code 'h' ->
-            if !(app_state.help_visible) then
-              App_state.exit_help app_state
-            else
-              App_state.enter_help app_state;
-            self#queue_draw;
+            exit ();
             true
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 't' ->
             App_state.enter_tonality_selection app_state;
@@ -327,8 +344,7 @@ class main_box ocamuse_context wakener =
             (match !(app_state.mode) with
             | App_state.TonalitySelection tstate ->
               let widget = new Selectors.tonality_selector_widget tstate app_state in
-              bottom_left_frame#set (widget :> LTerm_widget.t);
-              selector_widget <- Some (widget :> LTerm_widget.t)
+              bottom_left_frame#set (widget :> LTerm_widget.t)
             | _ -> ());
             self#queue_draw;
             true
@@ -338,8 +354,27 @@ class main_box ocamuse_context wakener =
             (match !(app_state.mode) with
             | App_state.TuningSelection tstate ->
               let widget = new Selectors.tuning_selector_widget tstate app_state in
-              bottom_left_frame#set (widget :> LTerm_widget.t);
-              selector_widget <- Some (widget :> LTerm_widget.t)
+              bottom_left_frame#set (widget :> LTerm_widget.t)
+            | _ -> ());
+            self#queue_draw;
+            true
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'a' ->
+            (* Enter arpeggio mode *)
+            App_state.enter_arpeggio_mode app_state;
+            (match !(app_state.mode) with
+            | App_state.ArpeggioMode astate ->
+              let widget = new Selectors.arpeggio_widget astate app_state ocamuse_context in
+              bottom_left_frame#set (widget :> LTerm_widget.t)
+            | _ -> ());
+            self#queue_draw;
+            true
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'c' ->
+            (* Enter chord mode *)
+            App_state.enter_chord_mode app_state;
+            (match !(app_state.mode) with
+            | App_state.ChordMode cstate ->
+              let widget = new Selectors.chord_widget cstate app_state ocamuse_context in
+              bottom_left_frame#set (widget :> LTerm_widget.t)
             | _ -> ());
             self#queue_draw;
             true
@@ -360,6 +395,11 @@ class main_box ocamuse_context wakener =
               | Types.B_mode -> Types.C_mode
             in
             ocamuse_context.mode <- next_mode;
+            self#queue_draw;
+            true
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'k' ->
+            (* Cycle color theme *)
+            ocamuse_context.color_theme <- Color_theme.cycle_theme ocamuse_context.color_theme;
             self#queue_draw;
             true
           | Key { code = Tab; _ } ->
@@ -385,8 +425,7 @@ class main_box ocamuse_context wakener =
               bottom_left_frame#set (widget :> LTerm_widget.t)
             | App_state.Normal ->
               (* Selection complete, restore help panel *)
-              bottom_left_frame#set (help_panel :> LTerm_widget.t);
-              selector_widget <- None
+              bottom_left_frame#set (help_panel :> LTerm_widget.t)
             | _ -> ());
             self#queue_draw;
             true
@@ -403,8 +442,39 @@ class main_box ocamuse_context wakener =
             | App_state.Normal ->
               (* Selection complete, restore help panel and redraw fretboard *)
               bottom_left_frame#set (help_panel :> LTerm_widget.t);
-              selector_widget <- None;
               fb_frame#queue_draw
+            | _ -> ());
+            self#queue_draw;
+            true
+          end
+          else false
+
+        | App_state.ChordMode _ ->
+          if Chord_mode.handle_input app_state event then begin
+            (* Update chord widget with new state *)
+            (match !(app_state.mode) with
+            | App_state.ChordMode cstate ->
+              let widget = new Selectors.chord_widget cstate app_state ocamuse_context in
+              bottom_left_frame#set (widget :> LTerm_widget.t)
+            | App_state.Normal ->
+              (* Chord mode exited, restore help panel *)
+              bottom_left_frame#set (help_panel :> LTerm_widget.t)
+            | _ -> ());
+            self#queue_draw;
+            true
+          end
+          else false
+
+        | App_state.ArpeggioMode _ ->
+          if Arpeggio_mode.handle_input app_state event then begin
+            (* Update arpeggio widget with new state *)
+            (match !(app_state.mode) with
+            | App_state.ArpeggioMode astate ->
+              let widget = new Selectors.arpeggio_widget astate app_state ocamuse_context in
+              bottom_left_frame#set (widget :> LTerm_widget.t)
+            | App_state.Normal ->
+              (* Arpeggio mode exited, restore help panel *)
+              bottom_left_frame#set (help_panel :> LTerm_widget.t)
             | _ -> ());
             self#queue_draw;
             true
@@ -417,7 +487,6 @@ class main_box ocamuse_context wakener =
           | Key { code = Escape; _ } ->
             App_state.return_to_normal app_state;
             bottom_left_frame#set (help_panel :> LTerm_widget.t);
-            selector_widget <- None;
             self#queue_draw;
             true
           | _ -> false

@@ -2,539 +2,505 @@
 
 ## Project Overview
 
-**Ocamuse** is an interactive GUI tool built entirely in OCaml for learning music theory on string instruments (guitars, bass, etc.). It uses the lambda-term library to provide a terminal-based graphical interface with various widgets for visualizing fretboards, note patterns, and chord diagrams.
+**Ocamuse** is an interactive terminal-based GUI application for learning music theory on fretted instruments (guitar, bass, etc.). Built entirely in OCaml using the lambda-term TUI library, it provides real-time visualization of scales, modes, chords, arpeggios, and chord diagrams directly in your terminal.
 
 **Author**: Dario Pinto <laradiopotin@gmail.com>
 **License**: ISC
-**Status**: Active development (some features still TODO)
+**Status**: Active development
 
-## Architecture
+*"This is a passion project I've been thinking about for a long time to help
+myself out with figuring out the more annoying concepts of music theory lol. I
+hope it might help someone else out there, and will definitely continue
+expanding this further with time. Thank you! - Dario"
+
+---
+
+## For Guitarists: Quick Start
+
+### What Does Ocamuse Do?
+
+Ocamuse helps you **visualize music theory concepts** on your fretboard:
+
+- **View scales and modes** across the entire fretboard
+- **See chord shapes** with diagrams showing finger positions
+- **Explore arpeggios** with notes highlighted in patterns
+- **Switch between tunings** (standard, drop D, open tunings)
+- **Color-coded visualization** to understand note relationships
+
+### Features for Musicians
+
+#### 1. Multiple Fretboard Views
+- **Plain View** - Compact, linear representation
+- **Fretted View** - Classic chord diagram style with boxes
+- **Interline View** - Guitar tab-style with horizontal lines
+
+#### 2. Scale and Mode Explorer
+- Visualize all 7 diatonic modes (Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian)
+- See the entire scale across the fretboard with color-coded degrees
+- Understand interval relationships visually
+
+#### 3. Chord Diagrams
+- Display all diatonic chords in your current key
+- View multiple voicings for each chord
+- Navigate different inversions
+- Fret numbers show you exactly where to play
+
+#### 4. Arpeggio Mode
+- Highlight arpeggio patterns for diatonic chords
+- See note positions across multiple octaves
+- Practice patterns in any key
+
+#### 5. Color Themes
+
+#### 6. Tuning Presets
+
+### Understanding the Display
+
+#### Context Panel (Right)
+Shows your current musical context:
+- **Tuning** - Current string tuning
+- **Key** - Root note and mode name (e.g., "E Dorian")
+- **Scale** - All notes in the current scale
+- **Highlighting** - What's currently highlighted (tonality/chord/arpeggio)
+- **Color Theme** - Active color scheme
+- **Diatonic Chords** - All chords in the key with Roman numerals
+- **View Mode** - Current display mode
+
+#### Fretboard (Center/Top)
+- Color-coded notes based on your selected theme
+- String numbers on the left (6 = low E, 1 = high E)
+- Fret markers show position on neck
+- Notes displayed as letter names with alterations
+
+#### Chord Diagrams
+
+---
+
+## Architecture (for the devs)
+
+*"This project slept for a long time. I discovered Claude and thought i'd use
+to make this what i had planned back when i thought i'd manage to free the time
+for it lol. This is my first vibe code, but the original code was imperative
+but based on a simple type model that has allowed it to become a codebase of
+rather acceptable sanity. Thank you! - Dario"*
 
 ### Core Components
 
 The project follows a modular architecture with clear separation of concerns:
 
-1. **Types** (`types.ml`) - Core type definitions and error types for the entire system
-2. **Config** (`config.ml`) - **NEW** Configuration module with preset tunings and defaults
-3. **Theory** (`theory.ml`) - Music theory logic (scales, modes, chords, intervals)
-4. **Fretboard** (`fretboard.ml`) - Fretboard data structure with coordinate lookup
-5. **Display** (`display.ml`) - Main display orchestration and view selection
-6. **Draw modules** - Rendering logic for different view modes:
-   - `draw.ml` - Draw dispatcher
-   - `draw_primitives.ml` - **NEW** Shared drawing primitives to eliminate duplication
-   - `draw_plain.ml` - Plain view rendering
-   - `draw_fretted.ml` - Fretted view rendering
-   - `draw_interline.ml` - Interline/tab view rendering
-7. **Classes** (`classes.ml`) - Lambda-term widget classes and event handling
-8. **Color** (`color.ml`) - Color management and theming
-9. **Conv** (`conv.ml`) - Safe conversion utilities with Result types
-10. **Pp** (`pp.ml`) - Pretty-printing formatters using the Fmt library
+#### Music Theory & Data
+1. **types.ml** - Core type definitions (notes, chords, modes, display types)
+2. **config.ml** - Configuration with tuning presets and color palettes
+3. **theory.ml** - Music theory algorithms (scales, modes, chords, voicings)
+4. **fretboard.ml** - Fretboard data structure with coordinate lookup
+5. **color_theme.ml** - Color theme system for note visualization
+
+#### Application State
+6. **app_state.ml** - Application state machine managing interactive modes
+7. **chord_mode.ml** - Chord selection and diagram mode logic
+8. **arpeggio_mode.ml** - Arpeggio pattern mode logic
+9. **selectors.ml** - Interactive selector widgets (tonality, tuning)
+
+#### Display & Rendering
+10. **display.ml** - Main display orchestration and view selection
+11. **draw.ml** - Draw dispatcher
+12. **draw_primitives.ml** - Shared drawing utilities
+13. **draw_plain.ml** - Plain view rendering
+14. **draw_fretted.ml** - Fretted view rendering
+15. **draw_interline.ml** - Interline/tab view rendering
+16. **draw_chord_diagram.ml** - Chord diagram visualization
+
+#### UI Framework
+17. **classes.ml** - Lambda-term widget classes and main event routing
+18. **widgets.ml** - UI panels (context panel, help panel, keybindings modal)
+19. **ocamuse.ml** - Application entry point
+
+#### Utilities
+20. **color.ml** - Color management utilities
+21. **conv.ml** - Safe conversion utilities with Result types
+22. **pp.ml** - Pretty-printing formatters using Fmt library
 
 ### Dependencies
 
-- **lambda-term** - Terminal UI library (main GUI framework)
+- **lambda-term** (3.3.2) - Terminal UI library (vendored in project)
 - **lwt** - Cooperative threading library for async operations
 - **zed** - Text editing library (used by lambda-term)
 - **fmt** - Pretty-printing library for formatted output
+
+---
 
 ## Key Data Structures
 
 ### Music Theory Types
 
 ```ocaml
+(** Base note without alteration *)
 type base_note = A | B | C | D | E | F | G
 
+(** Note with alteration (sharps/flats) *)
 type note = {
   base : base_note;
   alteration : int  (* positive for sharps, negative for flats *)
 }
 
+(** Seven diatonic modes *)
 type mode = C_mode | D_mode | E_mode | F_mode | G_mode | A_mode | B_mode
 
+(** Guitar tuning is a list of open string notes *)
 type tuning = note list
 
-type chord = Major | Minor | Dimin | Augment | Suspend2 | Suspend4
-           | Major7 | Domin7 | Minor7 | HalfDim7 | Sixth | MinorSixth
+(** Chord types *)
+type chord =
+  | Major | Minor | Dimin | Augment
+  | Suspend2 | Suspend4
+  | Major7 | Domin7 | Minor7 | HalfDim7
+  | Sixth | MinorSixth
+
+(** Diatonic triads (simpler for diatonic chord sequences) *)
+type diatonic_triad = Major | Minor | Diminished
+
+(** Color theme selection *)
+type color_theme =
+  | ChromaticGradient
+  | DiatonicDegrees
+  | CustomPalette of string
+
+(** What to highlight on the fretboard *)
+type highlight_source =
+  | Tonality of mode * note
+  | Chord of note * chord
+  | Arpeggio of note * chord
 ```
 
-### Display Types
+### Application State
 
 ```ocaml
-type base_colour = Black | Lblack | White | Lwhite
+(** Application modes - each has different keyboard shortcuts *)
+type app_mode =
+  | Normal                                    (* Default fretboard display *)
+  | TonalitySelection of tonality_state       (* Selecting root and mode *)
+  | TuningSelection of tuning_state           (* Selecting tuning *)
+  | ChordMode of chord_state                  (* Chord diagrams *)
+  | ArpeggioMode of arpeggio_state            (* Arpeggio patterns *)
+  | ProgressionMode of progression_state      (* Chord progressions *)
 
-type view =
-  | Plain of base_colour      (* Simple linear fretboard *)
-  | Fretted of base_colour    (* Boxed fretboard with fret markers *)
-  | Interline of base_colour  (* Guitar tab-like visualization *)
+(** Chord mode state with voicings *)
+and chord_state = {
+  selected_chord : (note * diatonic_triad) option;
+  inversion : int;                            (* 0, 1, or 2 *)
+  voicings : Theory.chord_voicing list;
+  voicing_index : int;
+}
 
-type display =
-  | Flat of view              (* Simple fretboard view *)
-  | Pattern of view * mode    (* Pattern view with mode highlighting *)
-```
-
-### Main Context
-
-```ocaml
-type ocamuse_structure = {
-  display_mode : display ref;
-  fretboard : note array array;
-  base_colour : base_colour ref;
-  tuning : tuning;
-  root_note : note;
-  mode : mode;
+(** Complete application state *)
+type t = {
+  mode : app_mode ref;
+  focus : focus_target ref;
+  context : ocamuse_structure;
+  help_visible : bool ref;
+  keybindings_modal_visible : bool ref;
+  debug_mode : bool ref;
 }
 ```
 
-The fretboard is represented as a 2D array: `note array array` where each row is a string and each column is a fret position.
-
-## Display System
-
-### View Modes
-
-The application supports three different visual representations:
-
-1. **Plain View** - Compact linear representation with minimal spacing
-2. **Fretted View** - Boxed representation with clear fret boundaries (like guitar diagrams)
-3. **Interline View** - Tab-like representation with horizontal lines for strings
-
-Each view can be rendered in two display modes:
-- **Flat** - Shows all notes with basic coloring
-- **Pattern** - Highlights notes in a specific mode/scale with degree-based coloring
-
-### Drawing Architecture
-
-The drawing system uses a cursor-based approach:
-
-```ocaml
-type pattern_view_draw_struc = {
-  view : view;
-  mode : mode;
-  string : int ref;
-  offset : int ref;
-  cursor_i : int ref;  (* Column cursor *)
-  cursor_j : int ref;  (* Row cursor *)
-  number_of_frets : int;
-  number_of_strings : int;
-  ctx : LTerm_draw.context;
-  color : LTerm_style.color;
-  fretboard : note array array;
-  notes_to_degree_tbl : (note, int) Hashtbl.t;
-  degree_to_color_tbl : (int, LTerm_style.color) Hashtbl.t;
-}
-```
-
-Each draw module follows this pattern:
-1. Calculate offsets and spacing based on view mode
-2. Iterate through fretboard with mutable cursors
-3. Write characters using `LTerm_draw.draw_char` at calculated positions
-4. Update cursors after each write operation
-
-### Color System
-
-**Degree-to-Color Mapping** (for pattern view):
-- 0 (Root) → Light Red
-- 1 (2nd) → Blue
-- 2 (3rd) → Light Green
-- 3 (4th) → Light Blue
-- 4 (5th) → Light Yellow
-- 5 (6th) → Light Magenta
-- 6 (7th) → Light Cyan
-
-**Base Colors** (for flat view and UI elements):
-- Black, Light Black, White, Light White (rotatable)
-
-## Widget System (Lambda-term)
-
-### Class Hierarchy
-
-```ocaml
-class fretboard_widget ocamuse_context
-  (* Handles keyboard events and view state changes *)
-
-class frame_board ocamuse_context
-  (* Manages drawing area allocation and frame rendering *)
-
-class labeled_frame s
-  (* Simple frame with centered label *)
-
-class main_box ocamuse_context wakener
-  (* Root widget: vertical box containing all UI elements *)
-```
-
-### Event Handling
-
-Key bindings:
-- **Page Up/Down** - Rotate base color
-- **Enter** - Cycle through view modes (Plain → Interline → Fretted)
-- **Backspace** - Return to Flat view from Pattern view
-- **Escape** - Exit application
-- **Arrow keys** - (Mentioned in menu but not yet implemented)
-
-Events propagate from `main_box` → `frame_board` → `fretboard_widget`
-
-### Layout System
-
-The UI uses a hierarchical layout:
-
-```
-main_box (vbox)
-├── top (vbox)
-│   └── fb_frame (frame_board)
-│       └── fretboard_widget
-└── bottom (hbox)
-    ├── up (labeled_frame "up")
-    └── down (labeled_frame "down")
-```
-
-The `frame_board` dynamically calculates the drawing context size based on:
-- View mode (different modes need different spacing)
-- Terminal size
-- Number of strings and frets
-
-## Music Theory Implementation
-
-### Mode System
-
-The system implements the 7 diatonic modes using rotation:
-
-1. Start with C major intervals: `[2; 2; 1; 2; 2; 2; 1]`
-2. Rotate based on mode (D mode = 1 rotation, E mode = 2 rotations, etc.)
-3. Build tonality by calculating notes using intervals
-
-```ocaml
-let intervals_of_mode mode =
-  let base = [2; 2; 1; 2; 2; 2; 1] in
-  compute_rotations base mode
-
-let build_tonality mode note =
-  let intervalic_formula = intervals_of_mode mode in
-  compute_tonality intervalic_formula note
-```
-
-### Diatonic Chord Sequence
-
-Chords are derived from scale degrees:
-- C major: `[Major; Minor; Minor; Major; Major; Minor; Diminished]`
-- Other modes rotate this sequence accordingly
-
-### Fretboard Initialization
-
-```ocaml
-let init ~tuning ?(range = 13) () : note array array
-```
-
-1. Takes tuning (list of open string notes) and range (number of frets)
-2. Uses a hashtable `coord_to_note_tbl` to map (fret, string) → note
-3. Generates each string by adding semitones to the open note
-4. Returns an inverted array (string 6 at index 0 for standard guitar view)
-
-## Code Style & Patterns
-
-### OCaml Formatting
-
-The project uses **ocamlformat 0.27.0** with specific settings:
-- Margin: 80 columns
-- Max indent: 2 spaces
-- Assignment operator: end-line style
-- Break sequences: true
-- Module item spacing: sparse
-- Field space: loose
-- Space around collections: true (arrays, lists, records, variants)
-
-### Documentation Style
-
-```ocaml
-(** [function_name arg1 arg2] brief description of what it does.
-
-    More detailed explanation if needed. *)
-```
-
-- Use `(** *)` for documentation comments (parsed by odoc)
-- Place doc comments **before** the item they document
-- Include function signature in brackets in first line
-- 2-space padding after doc comments
-
-### Naming Conventions
-
-- **Type names**: lowercase with underscores (`base_note`, `display_mode`)
-- **Variant constructors**: PascalCase (`Major`, `Plain`, `C_mode`)
-- **Module names**: UPPERCASE for submodules in same file (`PATTERN`, `WRITE`, `FMT`)
-- **Functions**: lowercase with underscores (`build_tonality`, `rotate_to_next`)
-- **Private/helper functions**: often prefixed with `_` or in nested modules
-
-### Module Organization
-
-Common pattern for organizing related functionality:
-
-```ocaml
-module FEATURE = struct
-  module SUBFEATURE = struct
-    (* implementation *)
-  end
-
-  (* main functions *)
-end
-```
-
-Examples:
-- `pp.ml`: `NOTES.FMT`, `FRETBOARD.FMT`, `OCAMUSE`
-- `draw_*.ml`: `PLAIN.WRITE`, `FRETTED.WRITE`, `INTERLINE.WRITE`
-
-### Common Patterns
-
-1. **Function composition with `@@` operator**:
-   ```ocaml
-   update_cursor struc @@ write_note struc !fret_j !fret_i
-   ```
-
-2. **Ref cells for mutable state**:
-   ```ocaml
-   let cursor_i = ref 0 in
-   cursor_i := !cursor_i + length
-   ```
-
-3. **Iterative drawing with while loops**:
-   ```ocaml
-   while !j < struc.number_of_strings do
-     (* draw operations *)
-     incr j
-   done
-   ```
-
-4. **Pattern matching on types**:
-   ```ocaml
-   match view with
-   | Plain _ -> (* ... *)
-   | Fretted _ -> (* ... *)
-   | Interline _ -> (* ... *)
-   ```
-
-5. **Hashtable for lookups**:
-   ```ocaml
-   let notes_to_degree_tbl = Hashtbl.create 512 in
-   List.iteri (fun i note -> Hashtbl.add tbl note i) mode
-   ```
-
-### Comment Style
-
-- Use `(* *)` for regular comments
-- Add explanatory comments for complex logic
-- Keep TODO lists in comments (see `theory.ml:98-123`)
-- Inline comments for state changes: `(* Rotate color forward *)`
-
-### Error Handling
-
-- Use `assert false` for theoretically unreachable code paths
-- Pattern matching is generally exhaustive
-- Option types used for safe lookups: `Hashtbl.find_opt` → `match Some | None`
-
-## TODO Features (from codebase)
-
-Priority features mentioned in comments:
-
-### High Priority
-- ✅ Lambda-term support for interactive experience
-- ✅ Display diatonic chord names
-- ✅ Create simple pattern highlighting for C major
-- ⏳ Context menu in bottom-right pane showing:
-  - Current mode
-  - Current tonality
-  - Tuning
-- ⏳ Navigate all modes of given tonality with highlighting
-
-### Medium Priority
-- ❌ Highlight an arpeggio
-- ❌ Highlight a path of notes on the fretboard
-- ❌ Input patterns
-- ❌ Chord diagrams
-  - Display diatonic chord diagrams
-  - Select chord, voicing, generate diagram
-
-### Low Priority
-- ❌ Scale degree sequences (progressions)
-- ❌ Tabs (map to fretboard, print sequences/chords/notes)
-- ❌ Markov chord progressions
-- ❌ Generate MIDI
-- ❌ Generate PDF music sheet
+---
 
 ## Development Guidelines
 
+### Project Structure
+
+```
+ocamuse/
+├── src/                      (* All source code *)
+│   ├── types.ml              (* Core types *)
+│   ├── config.ml             (* Configuration *)
+│   ├── theory.ml             (* Music theory *)
+│   ├── app_state.ml          (* State machine *)
+│   ├── classes.ml            (* Main UI *)
+│   ├── widgets.ml            (* UI components *)
+│   ├── draw_*.ml             (* Rendering *)
+│   └── ...
+├── dune-project              (* Dune build config *)
+├── ocamuse.opam              (* Package definition *)
+└── Claude.md                 (* This file *)
+```
+
 ### Adding a New Feature
 
-1. **Define types** in `types.ml` if needed
-2. **Add theory logic** in `theory.ml` for music-related calculations
-3. **Create drawing functions** in appropriate `draw_*.ml` module
-4. **Add widget/event handling** in `classes.ml`
-5. **Wire up display logic** in `display.ml`
-6. **Add keyboard shortcuts** in the event handlers
+#### 1. Define Types (types.ml)
+```ocaml
+(* Add new types for your feature *)
+type new_feature = (* ... *)
+```
 
-### Testing Changes
+#### 2. Add Theory Logic (theory.ml)
+```ocaml
+(* Implement music theory calculations *)
+let calculate_new_feature root mode = (* ... *)
+```
 
-- Run `dune build` to compile
-- Test with `dune exec ocamuse`
-- Use different terminal sizes to test layout
-- Try all view modes and color combinations
+#### 3. Create State (app_state.ml)
+```ocaml
+(* Add mode and state *)
+type app_mode =
+  | (* ... *)
+  | NewFeatureMode of new_feature_state
 
-### Code Quality Checklist
+and new_feature_state = {
+  (* state fields *)
+}
+```
 
-- [ ] Run `dune build @fmt` to format code
-- [ ] Add documentation comments for public functions
-- [ ] Use appropriate module structure (nested modules for related functionality)
-- [ ] Handle all pattern matching cases
-- [ ] Consider terminal resize behavior for new UI elements
-- [ ] Test keyboard event propagation
-- [ ] Update TODO comments as features are completed
+#### 4. Add Input Handler (new_feature_mode.ml)
+```ocaml
+let handle_input state event =
+  match !(state.App_state.mode) with
+  | App_state.NewFeatureMode fstate ->
+      match event with
+      | Key { code = Escape; _ } ->
+          App_state.return_to_normal state;
+          true
+      | (* other keys *)
+  | _ -> false
+```
 
-## File Reference Quick Guide
+#### 5. Create Widget (selectors.ml or widgets.ml)
+```ocaml
+class new_feature_widget fstate app_state ocamuse_context =
+  object
+    inherit LTerm_widget.t "new_feature"
 
-| File | Purpose |
-|------|---------|
-| `types.ml` | All type definitions and error types |
-| `config.ml` | **NEW** Tuning presets and configuration |
-| `ocamuse.ml` | Entry point, context initialization |
-| `classes.ml` | Lambda-term widgets and event handling |
-| `display.ml` | View selection and orchestration |
-| `draw.ml` | Drawing dispatcher |
-| `draw_primitives.ml` | **NEW** Shared drawing utilities |
-| `draw_plain.ml` | Plain view rendering |
-| `draw_fretted.ml` | Fretted view rendering |
-| `draw_interline.ml` | Interline/tab view rendering |
-| `theory.ml` | Music theory algorithms |
-| `fretboard.ml` | Fretboard data structure with coord lookup |
-| `color.ml` | Color management |
-| `conv.ml` | Safe type conversions with Result types |
-| `pp.ml` | Pretty-printing formatters |
+    method! draw ctx _focused =
+      (* drawing logic *)
+
+    method! can_focus = false
+  end
+```
+
+#### 6. Wire Up in Main (classes.ml)
+```ocaml
+(* Add key binding *)
+| Key { code = Char c; _ } when c = 'x' ->
+    App_state.enter_new_feature_mode app_state;
+    let widget = new Selectors.new_feature_widget (* ... *) in
+    bottom_left_frame#set (widget :> LTerm_widget.t);
+    self#queue_draw;
+    true
+
+(* Add mode routing *)
+| App_state.NewFeatureMode _ ->
+    if New_feature_mode.handle_input app_state event then begin
+      (* update widget *)
+      self#queue_draw;
+      true
+    end else false
+```
+
+#### 7. Update Help (widgets.ml)
+```ocaml
+(* Add to keybindings_modal *)
+draw_line "  x - New feature";
+```
+
+(Or allow for the help menu to welcome more options)
 
 ## Entry Point Flow
 
 ```
 ocamuse.ml:run()
-  → Create default_context()
-  → Create main_box widget with context
-  → LTerm_widget.run term main_box waiter
-    → User interactions trigger events
-    → Events update context refs (display_mode, base_colour)
-    → Widgets call queue_draw to trigger redraws
-    → frame_board.draw() calls Display.select_view()
-      → Builds pattern_view_draw_struc
-      → Dispatches to Draw.PATTERN.pattern
-        → Calls appropriate view module (PLAIN/FRETTED/INTERLINE)
+  │
+  ├─→ Create default_context()
+  │     - Initialize fretboard with tuning
+  │     - Set default mode (C major)
+  │     - Set default display (Plain view)
+  │
+  ├─→ Create layer system
+  │     prepare_simple_run() → (do_run, push_layer, pop_layer, exit)
+  │
+  ├─→ Create main_box widget
+  │     - Build layout (top/bottom, left/right panels)
+  │     - Register event handlers
+  │     - Set up focus management
+  │
+  └─→ Run event loop
+        do_run main_box
+          │
+          └─→ Event loop
+                ├─→ User presses key
+                ├─→ Event goes to focused layer
+                ├─→ Handler updates state
+                ├─→ queue_draw() triggers redraw
+                └─→ display.ml → draw.ml → draw_*.ml
 ```
 
 ---
 
-## Refactoring History (2025-10-03)
+## Current Status
 
-### Phase 1: Foundation (Safety & Correctness) ✅
+### ✅ Completed Features
 
-**1.1 Eliminated Global Mutable State**
-- Removed `coord_to_note_tbl` global reference from `fretboard.ml`
-- Introduced `fretboard_data` type with encapsulated hashtable
-- Updated all callers to use new structure
-- **Impact**: Better testability, thread safety, functional purity
+- [x] Interactive terminal UI with lambda-term
+- [x] Multiple fretboard views (Plain, Fretted, Interline)
+- [x] Mode visualization (all 7 diatonic modes)
+- [x] Tuning presets (Standard, Drop D, Open G, Open D, 7-string)
+- [x] Color themes (Diatonic, Chromatic, Custom palettes)
+- [x] Chord diagrams with voicings
+- [x] Arpeggio mode
+- [x] Context panel showing musical information
+- [x] Help modal with keybindings
+- [x] Tonality selection (interactive key change)
+- [x] Tuning selection (interactive tuning change)
+- [x] Debug mode (border visualization)
+- [x] Layer-based modal system
+- [x] Safe error handling (Result types)
+- [x] Configurable presets
 
-**1.2 Replaced `assert false` with Result Types**
-- Added `parse_error` type with proper error variants
-- Converted `conv.ml` functions to return `Result` types:
-  - `base_of_char`: `char -> (base_note, parse_error) result`
-  - `note_of_string`: `string -> (note, parse_error) result`
-  - `mode_of_string`: `string -> (mode, parse_error) result`
-- Improved `note_to_int` to handle extended alterations with modulo
-- Replaced unreachable `assert false` with comments in `classes.ml`
-- Fixed `random_base_colour` exhaustive matching
-- **Impact**: No runtime crashes, graceful error handling
+### 🚧 In Progress
 
-**1.3 Fixed Standard Tuning Configuration**
-- Created `config.ml` module with preset tunings:
-  - `standard_6` (6-string guitar: E A D G B E)
-  - `standard_7` (7-string guitar)
-  - `drop_d`, `open_g`, `open_d` tunings
-- Removed hardcoded 7-string tuning bug from `ocamuse.ml`
-- Made tuning configurable via optional parameters
-- **Impact**: Correct defaults, easy extensibility
+- [ ] Progression builder mode
+- [ ] Custom tuning editor
+- [ ] Animation for arpeggio patterns
 
-### Phase 2: Code Duplication Reduction ✅
+### 📋 Planned Features
 
-**2.1 Extracted Shared Drawing Primitives**
-- Created `draw_primitives.ml` module with:
-  - `offset_mode` type for different drawing contexts
-  - `draw_string` function replacing 3 nearly identical implementations
-  - `cursor` type and helpers for position tracking
-- Refactored all three WRITE modules (`draw_plain`, `draw_fretted`, `draw_interline`)
-- Eliminated ~90 lines of duplicated string iteration code
-- **Impact**: Single source of truth, easier maintenance
+#### High Priority
+- [ ] MIDI output
+- [ ] Save/load presets
+- [ ] Custom color palette editor
+- [ ] More chord types (7ths, 9ths, altered chords)
 
-**2.2 Dependency Cleanup**
-- Removed `prelude` dependency (not yet integrated)
-- Added `fmt` library explicitly for pretty-printing
-- Updated `dune-project` and opam files
-- **Impact**: Clearer dependencies, faster builds
+#### Medium Priority
+- [ ] Scale finder (from note selection)
+- [ ] Chord progression suggestions
+- [ ] Tab notation export
+- [ ] Practice mode with randomization
 
-### Code Quality Metrics
-
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| Global mutable state | 1 | 0 | ✅ -100% |
-| `assert false` occurrences | 5 | 0 | ✅ -100% |
-| Drawing code duplication | High | Low | ✅ ~50% reduction |
-| Error handling | Unsafe | Type-safe | ✅ Result types |
-| Tuning configuration | Hardcoded | Configurable | ✅ 5+ presets |
-| Module count | 13 | 15 | +2 (config, draw_primitives) |
-| Build status | ✅ Clean | ✅ Clean | Maintained |
-
-### Remaining Improvements (Future Work)
-
-From REFACTORING_ROADMAP.md, these remain for future PRs:
-
-**Medium Priority:**
-- Refactor ref cells to functional iteration (fold/map instead of while loops)
-- Simplify display type hierarchy (eliminate view bubbling)
-- Extract spacing logic abstractions in `pp.ml`
-
-**Low Priority:**
-- Strong event types (replace boolean returns)
-- Better color module organization
-- Domain types for music theory (tonality, chord_progression)
-
-### Key Architectural Improvements
-
-1. **Fretboard Data Structure**:
-   ```ocaml
-   (* Before: Global mutable state *)
-   let coord_to_note_tbl = ref @@ Hashtbl.create 512
-
-   (* After: Encapsulated data *)
-   type fretboard_data = {
-     notes : note array array;
-     coord_lookup : (int * int, note) Hashtbl.t;
-   }
-   ```
-
-2. **Error Handling**:
-   ```ocaml
-   (* Before: Runtime crashes *)
-   let base_of_string = function
-     | 'a' | 'A' -> A
-     | _ -> assert false
-
-   (* After: Type-safe errors *)
-   let base_of_char = function
-     | 'a' | 'A' -> Ok A
-     | c -> Error (InvalidCharacter c)
-   ```
-
-3. **Configuration**:
-   ```ocaml
-   (* Before: Hardcoded in main *)
-   let standard_tuning = [ A; E; A; D; G; B; E ]  (* Wrong! *)
-
-   (* After: Proper config module *)
-   module Config.Tunings = struct
-     let standard_6 = [ E; A; D; G; B; E ]  (* Correct *)
-   end
-   ```
+#### Low Priority
+- [ ] Markov chain progressions
+- [ ] PDF export
+- [ ] Web-based version
+- [ ] Audio playback
 
 ---
 
-**Last Updated**: Refactored on 2025-10-03
+## Troubleshooting
+
+### Build Issues
+
+**Problem**: `dune build` fails
+```bash
+# Clean and rebuild
+dune clean
+dune build
+```
+
+**Problem**: Missing dependencies
+```bash
+# Install via opam
+opam install . --deps-only
+```
+
+### Runtime Issues
+
+**Problem**: Colors look wrong
+- Try different color themes with `k`
+- Check terminal supports 256 colors
+- Some terminals have limited color palettes
+
+**Problem**: Layout is broken
+- Terminal might be too small (minimum ~80×24)
+- Try resizing terminal window
+- Press `Ctrl+L` to force redraw
+
+**Problem**: Keys don't work
+- Check if terminal is capturing keys (some terminals intercept shortcuts)
+- Try in different terminal emulator
+- Press `?` to see keybindings
+
+### Known Limitations
+
+- Requires terminal with 256-color support
+- Minimum terminal size: ~80 columns × 24 rows
+- Mouse support varies by terminal
+- No Windows support (Unix/Linux/macOS only)
+
+---
+
+## Contributing
+
+### Refactoring Opportunities
+
+See `REFACTORING_ROADMAP.md` for planned improvements:
+
+**High Priority:**
+- Type safety improvements
+- Performance optimizations
+- Better error messages
+
+**Medium Priority:**
+- Reduce imperative loops (use fold/map)
+- Simplify display type hierarchy
+- Extract spacing logic abstractions
+
+**Low Priority:**
+- Strong event types
+- Better module organization
+- Domain types for progressions
+
+### Git Workflow
+
+```bash
+# Create feature branch
+git checkout -b feature/new-feature
+
+# Make changes
+# ... edit files ...
+
+# Format code
+dune build @fmt
+dune promote
+
+# Test
+dune build
+dune exec ocamuse
+
+# Commit
+git add .
+git commit -m "Add new feature"
+
+# Push
+git push origin feature/new-feature
+```
+
+---
+
+## Resources
+
+### Lambda-Term Documentation
+- Source: `lambda-term.3.3.2/` (vendored in project)
+- Examples: `lambda-term.3.3.2/examples/`
+- Key modules:
+  - `LTerm_widget` - Widget base classes
+  - `LTerm_draw` - Drawing primitives
+  - `LTerm_style` - Text styling
+  - `LTerm_event` - Event handling
+  - `LTerm_geom` - Geometry (rect, size)
+
+### Music Theory References
+- Mode intervals: Wikipedia "Mode (music)"
+- Chord theory: Wikipedia "Chord (music)"
+- Fretboard layout: Standard guitar tuning
+
+### OCaml Resources
+- OCaml.org - Official documentation
+- Real World OCaml - Book
+- Dune - Build system docs
+
+---
+
+**Last Updated**: 2025-10-04
 **Claude Version**: Sonnet 4.5
+
+---
+
+*This document is maintained as a living reference for developers and users of Ocamuse. Contributions and corrections welcome!*

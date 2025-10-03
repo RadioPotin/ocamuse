@@ -87,6 +87,16 @@ type display =
   | Flat of view
   | Pattern of view * mode
 
+type highlight_source =
+  | Tonality of mode * note
+  | Chord of note * chord
+  | Arpeggio of note * chord
+
+type color_theme =
+  | ChromaticGradient  (* Maps 12 pitch classes to color wheel *)
+  | DiatonicDegrees    (* Traditional degree-based coloring *)
+  | CustomPalette of string  (* Custom palette by name *)
+
 type pattern_view_draw_struc =
   { view : view
   ; mode : mode
@@ -110,4 +120,6 @@ type ocamuse_structure =
   ; mutable tuning : tuning
   ; mutable root_note : note
   ; mutable mode : mode
+  ; mutable highlight_source : highlight_source
+  ; mutable color_theme : color_theme
   }

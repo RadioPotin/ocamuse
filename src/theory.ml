@@ -76,24 +76,243 @@ let build_diatonic_triads_sequence mode note =
   let tonality = build_tonality mode note in
   List.map2 (fun chord note -> (note, chord)) diatonic_chord_sequence tonality
 
+(** Build a note from a root by adding semitones chromatically *)
+let build_note_by_semitones root semitones =
+  let open Types in
+  (* Convert root to pitch class *)
+  let root_pc = match root.base with
+    | C -> 0 | D -> 2 | E -> 4 | F -> 5 | G -> 7 | A -> 9 | B -> 11
+  in
+  let root_pc_with_alt = root_pc + root.alteration in
+
+  (* Calculate target pitch class *)
+  let target_pc_raw = root_pc_with_alt + semitones in
+  let target_pc = ((target_pc_raw mod 12) + 12) mod 12 in
+
+  (* Find the appropriate base note based on interval from root *)
+  (* For triads, we want: root, skip one letter, skip one letter *)
+  let base_offset = match semitones with
+    | 3 | 4 -> 2      (* Third: skip 2 letter names (C->E, D->F, etc.) *)
+    | 6 | 7 | 8 -> 4  (* Fifth: skip 4 letter names (C->G, D->A, etc.) *)
+    | _ -> 0          (* Root or other *)
+  in
+
+  let root_base_idx = match root.base with
+    | C -> 0 | D -> 1 | E -> 2 | F -> 3 | G -> 4 | A -> 5 | B -> 6
+  in
+  let target_base_idx = (root_base_idx + base_offset) mod 7 in
+  let target_base = match target_base_idx with
+    | 0 -> C | 1 -> D | 2 -> E | 3 -> F | 4 -> G | 5 -> A | 6 -> B | _ -> C
+  in
+
+  (* Calculate what alteration we need *)
+  let target_base_pc = match target_base with
+    | C -> 0 | D -> 2 | E -> 4 | F -> 5 | G -> 7 | A -> 9 | B -> 11
+  in
+  let alteration = target_pc - target_base_pc in
+
+  {base = target_base; alteration}
+
+(** Build notes of a triad chord (root, third, fifth) *)
+let build_triad_notes root (chord_type : Types.chord) =
+  let open Types in
+  let (third_interval, fifth_interval) = match chord_type with
+    | Major -> (4, 7)      (* Major third + Perfect fifth *)
+    | Minor -> (3, 7)      (* Minor third + Perfect fifth *)
+    | Dimin -> (3, 6)      (* Minor third + Diminished fifth *)
+    | Augment -> (4, 8)    (* Major third + Augmented fifth *)
+    | _ -> (4, 7)          (* Default to major for other types *)
+  in
+  let third = build_note_by_semitones root third_interval in
+  let fifth = build_note_by_semitones root fifth_interval in
+  [root; third; fifth]
+
+(** Apply inversion to chord notes
+    - 0 = root position: [1, 3, 5]
+    - 1 = 1st inversion: [3, 5, 1] (third in bass)
+    - 2 = 2nd inversion: [5, 1, 3] (fifth in bass)
+*)
+let invert_chord_notes notes inversion =
+  let inv = inversion mod 3 in  (* Triads have 3 inversions *)
+  match inv with
+  | 0 -> notes  (* Root position *)
+  | 1 -> (match notes with [a; b; c] -> [b; c; a] | _ -> notes)  (* 1st inversion *)
+  | 2 -> (match notes with [a; b; c] -> [c; a; b] | _ -> notes)  (* 2nd inversion *)
+  | _ -> notes
+
+(** Convert note to chromatic pitch class (0-11) *)
+let note_to_pitch_class note =
+  let open Types in
+  let base_semitones = match note.base with
+    | C -> 0 | D -> 2 | E -> 4 | F -> 5 | G -> 7 | A -> 9 | B -> 11
+  in
+  (base_semitones + note.alteration) mod 12
+
 let build_degree_tbl mode =
   let degree_tbl = Hashtbl.create 512 in
-  List.iteri (fun i note -> Hashtbl.add degree_tbl note i) mode;
+
+  (* Build pitch class to degree mapping *)
+  let pitch_class_to_degree = Hashtbl.create 12 in
+  List.iteri (fun i note ->
+    let pc = note_to_pitch_class note in
+    Hashtbl.add pitch_class_to_degree pc i
+  ) mode;
+
+  (* Generate all enharmonic equivalents *)
+  let all_bases = [Types.C; Types.D; Types.E; Types.F; Types.G; Types.A; Types.B] in
+  List.iter (fun base ->
+    for alt = -2 to 2 do
+      let note = Types.{base; alteration = alt} in
+      let pc = note_to_pitch_class note in
+      match Hashtbl.find_opt pitch_class_to_degree pc with
+      | Some degree ->
+          Hashtbl.add degree_tbl note degree;
+      | None -> ()
+    done
+  ) all_bases;
+
   degree_tbl
 
-let build_degree_colour_tbl mode =
+let build_degree_colour_tbl mode theme =
   let degree_colour_tbl = Hashtbl.create 512 in
   List.iteri
-    (fun i _note ->
-      let color = Conv.degree_to_colour i in
-      let color = Color.event_to_color color in
+    (fun i note ->
+      let color = Color_theme.get_note_color theme note (Some i) in
       Hashtbl.add degree_colour_tbl i color )
     mode;
   degree_colour_tbl
 
+(** Build hashtable for chord/arpeggio highlighting *)
+let build_chord_highlight_tables chord_notes theme =
+  let notes_tbl = Hashtbl.create 512 in
+  let degree_tbl = Hashtbl.create 512 in
+
+  (* Build a set of pitch classes for this chord *)
+  let pitch_classes = List.map note_to_pitch_class chord_notes in
+  let pitch_class_to_degree = Hashtbl.create 12 in
+  List.iteri (fun i pitch_class ->
+    Hashtbl.add pitch_class_to_degree pitch_class i
+  ) pitch_classes;
+
+  (* Generate all possible note representations for each pitch class *)
+  let all_bases = [Types.C; Types.D; Types.E; Types.F; Types.G; Types.A; Types.B] in
+  List.iter (fun base ->
+    for alt = -2 to 2 do
+      let note = Types.{base; alteration = alt} in
+      let pc = note_to_pitch_class note in
+      match Hashtbl.find_opt pitch_class_to_degree pc with
+      | Some degree ->
+          Hashtbl.add notes_tbl note degree;
+      | None -> ()
+    done
+  ) all_bases;
+
+  (* Build color table using theme *)
+  List.iteri (fun i note ->
+    let color = Color_theme.get_note_color theme note (Some i) in
+    Hashtbl.add degree_tbl i color
+  ) chord_notes;
+
+  (notes_tbl, degree_tbl)
+
 let is_diatonic struc note =
   let open Types in
   Hashtbl.mem struc.notes_to_degree_tbl note
+
+
+(** Chord voicing - represents a playable chord position on the fretboard.
+    Each element is (string_index, fret_number) or None for muted strings. *)
+type chord_voicing =
+  { positions : (int * int) option array  (** One per string: Some (string, fret) or None *)
+  ; start_fret : int  (** Starting fret for the diagram (usually lowest fret used) *)
+  ; bass_note : Types.note  (** The lowest note played (bass note) *)
+  }
+
+
+(** [find_chord_voicings fretboard chord_notes max_frets] finds playable chord
+    voicings on the fretboard. Returns a list of voicings sorted by
+    playability (lower fret positions first). *)
+let find_chord_voicings (fretboard : Types.fretboard_data) chord_notes =
+  let open Types in
+  let num_strings = Array.length fretboard.notes in
+  let num_frets = if num_strings > 0 then Array.length fretboard.notes.(0) else 0 in
+
+  (* Convert chord notes to pitch classes for matching *)
+  let chord_pcs = List.map note_to_pitch_class chord_notes in
+  let chord_pc_set = Hashtbl.create 12 in
+  List.iter (fun pc -> Hashtbl.add chord_pc_set pc ()) chord_pcs;
+
+  let voicings = ref [] in
+
+  (* Try to find voicings starting from each fret position (open to fret 10) *)
+  for start_fret = 0 to min 10 (num_frets - 1) do
+    (* For each starting fret, try to build a chord shape within 4-fret span *)
+    let max_stretch = 4 in
+    let end_fret = min (start_fret + max_stretch) (num_frets - 1) in
+
+    (* Try all combinations of positions within this range *)
+    let positions = Array.make num_strings None in
+    let found_notes = ref [] in
+
+    (* For each string, find the best note to play *)
+    for string_idx = 0 to num_strings - 1 do
+      let best_fret = ref None in
+
+      for fret = start_fret to end_fret do
+        let note = fretboard.notes.(string_idx).(fret) in
+        let pc = note_to_pitch_class note in
+
+        if Hashtbl.mem chord_pc_set pc then begin
+          match !best_fret with
+          | None ->
+            best_fret := Some fret;
+            found_notes := note :: !found_notes
+          | Some current_fret ->
+            (* Prefer lower frets within range *)
+            if fret < current_fret then begin
+              best_fret := Some fret;
+              found_notes := note :: !found_notes
+            end
+        end
+      done;
+
+      positions.(string_idx) <- Option.map (fun f -> (string_idx, f)) !best_fret
+    done;
+
+    (* Check if we have at least 3 notes and all chord tones present *)
+    let played_pcs = List.map note_to_pitch_class !found_notes in
+    let unique_pcs = Hashtbl.create 12 in
+    List.iter (fun pc -> Hashtbl.add unique_pcs pc ()) played_pcs;
+
+    let has_all_chord_tones =
+      List.for_all (fun pc -> Hashtbl.mem unique_pcs pc) chord_pcs
+    in
+
+    if has_all_chord_tones && List.length !found_notes >= 3 then begin
+      (* Find the bass note (lowest string with a note) *)
+      let bass_note = ref None in
+      for string_idx = num_strings - 1 downto 0 do
+        match positions.(string_idx) with
+        | Some (_, fret) ->
+          if !bass_note = None then
+            bass_note := Some fretboard.notes.(string_idx).(fret)
+        | None -> ()
+      done;
+
+      match !bass_note with
+      | Some bn ->
+        voicings := {
+          positions;
+          start_fret = if start_fret = 0 then 0 else start_fret;
+          bass_note = bn;
+        } :: !voicings
+      | None -> ()
+    end
+  done;
+
+  (* Sort by start_fret (prefer lower positions) *)
+  List.sort (fun v1 v2 -> compare v1.start_fret v2.start_fret) !voicings
+
 
 (*
   TODO:

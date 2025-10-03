@@ -3,11 +3,15 @@
  (libraries lambda-term lwt lwt.unix zed fmt)
  (modules
   app_state
+  arpeggio_mode
+  chord_mode
   color
+  color_theme
   config
   conv
   display
   draw
+  draw_chord_diagram
   draw_interline
   draw_plain
   draw_primitives

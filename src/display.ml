@@ -32,13 +32,23 @@ let select_view ctx ocamuse_context =
     }
   in
   LTerm_draw.clear ctx;
-  let tonality =
-    Theory.build_tonality ocamuse_context.mode { base = C; alteration = 0 }
+  (* Build highlighting tables based on highlight_source *)
+  let (notes_to_degree_tbl, degree_to_colour_tbl) =
+    match ocamuse_context.highlight_source with
+    | Tonality (mode, root) ->
+      let tonality = Theory.build_tonality mode root in
+      let notes_tbl = Theory.build_degree_tbl tonality in
+      let colour_tbl = Theory.build_degree_colour_tbl tonality ocamuse_context.color_theme in
+      (notes_tbl, colour_tbl)
+    | Chord (root, chord_type) ->
+      let chord_notes = Theory.build_triad_notes root chord_type in
+      (* Note: We highlight all chord tones regardless of inversion *)
+      (* The inversion is just for display in the chord widget, not for highlighting *)
+      Theory.build_chord_highlight_tables chord_notes ocamuse_context.color_theme
+    | Arpeggio (root, chord_type) ->
+      let chord_notes = Theory.build_triad_notes root chord_type in
+      Theory.build_chord_highlight_tables chord_notes ocamuse_context.color_theme
   in
-  (* make table with Types.notes as keys, and int falseas value (key degrees) *)
-  let notes_to_degree_tbl = Theory.build_degree_tbl tonality in
-  (* make table with int (key degrees) as keys, and Types.color_plain_view_event as value  *)
-  let degree_to_colour_tbl = Theory.build_degree_colour_tbl tonality in
   let display_mode = !(ocamuse_context.display_mode) in
   let view = bubble_view display_mode in
   begin
