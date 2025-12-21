@@ -1,0 +1,19 @@
+(test
+ (name test_pitch)
+ (libraries ocaml-music-theory alcotest))
+
+(test
+ (name test_interval)
+ (libraries ocaml-music-theory alcotest))
+
+(test
+ (name test_note)
+ (libraries ocaml-music-theory alcotest))
+
+(test
+ (name test_scales)
+ (libraries ocaml-music-theory alcotest))
+
+(test
+ (name test_harmony)
+ (libraries ocaml-music-theory alcotest))

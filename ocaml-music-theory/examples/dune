@@ -1,0 +1,7 @@
+(executable
+ (name basic_usage)
+ (libraries ocaml-music-theory))
+
+(executable
+ (name theory_showcase)
+ (libraries ocaml-music-theory))

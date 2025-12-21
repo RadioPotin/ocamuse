@@ -1,0 +1,7 @@
+(library
+ (name music_theory)
+ (public_name ocaml-music-theory)
+ (modules music_theory pitch interval note mode scale circle_of_fifths chord)
+ (libraries))
+
+(include_subdirs unqualified)

@@ -1,0 +1,28 @@
+(lang dune 3.0)
+
+(name ocaml-music-theory)
+
+(version 0.1.0)
+
+(generate_opam_files true)
+
+(license ISC)
+
+(authors "Dario Pinto")
+
+(maintainers "laradiopotin@gmail.com")
+
+(source
+ (github dariocp/ocaml-music-theory))
+
+(package
+ (name ocaml-music-theory)
+ (synopsis "OCaml music theory library based on circle of fifths")
+ (description
+  "A comprehensive music theory library providing types and functions for working with notes, intervals, scales, chords, and the circle of fifths. Designed for music applications, educational tools, and algorithmic composition.")
+ (depends
+  (ocaml
+   (>= 4.08))
+  (dune
+   (>= 3.0))
+  (alcotest :with-test)))
