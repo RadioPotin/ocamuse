@@ -415,3 +415,128 @@ class tonality_selector_widget (tstate : App_state.tonality_state) (app_state : 
     method! can_focus = false
   end
 
+(** Handle theme selection input *)
+let handle_theme_input state event =
+  let open LTerm_event in
+  match !(state.App_state.mode) with
+  | App_state.ThemeSelection tstate -> begin
+    match event with
+    | Key { code = Escape; _ } ->
+      App_state.return_to_normal state;
+      true
+    | Key { code = Up; _ } ->
+      let num_themes = List.length tstate.available_themes in
+      let new_idx =
+        if tstate.theme_index > 0 then tstate.theme_index - 1
+        else num_themes - 1
+      in
+      let new_state = { tstate with theme_index = new_idx } in
+      (* Apply preview *)
+      let selected_theme = List.nth tstate.available_themes new_idx in
+      state.context.color_theme <- selected_theme;
+      state.mode := App_state.ThemeSelection new_state;
+      true
+    | Key { code = Down; _ } ->
+      let num_themes = List.length tstate.available_themes in
+      let new_idx = (tstate.theme_index + 1) mod num_themes in
+      let new_state = { tstate with theme_index = new_idx } in
+      (* Apply preview *)
+      let selected_theme = List.nth tstate.available_themes new_idx in
+      state.context.color_theme <- selected_theme;
+      state.mode := App_state.ThemeSelection new_state;
+      true
+    | Key { code = Enter; _ } ->
+      (* Theme already applied via preview, just exit *)
+      App_state.return_to_normal state;
+      true
+    | Key { code = Char c; _ } ->
+      let ch_code = Uchar.to_int c in
+      if ch_code > 127 then false
+      else begin
+        let ch = Char.chr ch_code in
+        (* Allow number keys 1-9 for quick selection *)
+        if ch >= '1' && ch <= '9' then begin
+          let idx = Char.code ch - Char.code '1' in
+          if idx < List.length tstate.available_themes then begin
+            let new_state = { tstate with theme_index = idx } in
+            let selected_theme = List.nth tstate.available_themes idx in
+            state.context.color_theme <- selected_theme;
+            state.mode := App_state.ThemeSelection new_state;
+            true
+          end
+          else false
+        end
+        else false
+      end
+    | _ -> false
+  end
+  | _ -> false
+
+(** Theme selector widget - displays available themes with descriptions *)
+class theme_selector_widget (tstate : App_state.theme_state) (app_state : App_state.t) =
+  object
+    inherit LTerm_widget.t "theme_selector"
+
+    method! size_request =
+      let num_themes = List.length tstate.available_themes in
+      { LTerm_geom.rows = 4 + num_themes + 2; cols = 60 }
+
+    method! draw ctx _focused =
+      let open LTerm_draw in
+      let open LTerm_style in
+      let open LTerm_geom in
+      clear ctx;
+
+      (* Debug mode: draw border *)
+      if !(app_state.debug_mode) then begin
+        let sz = size ctx in
+        draw_frame ctx { row1 = 0; col1 = 0; row2 = sz.rows - 1; col2 = sz.cols - 1 }
+          ~style:{ none with foreground = Some lmagenta } Light
+      end;
+
+      let { rows; cols } = size ctx in
+      let row = ref 0 in
+
+      let draw_line text style =
+        if !row < rows && cols > 2 then begin
+          draw_text_line ctx !row 1 text style;
+          incr row
+        end
+      in
+
+      draw_line "SELECT COLOR THEME" { none with bold = Some true; foreground = Some lcyan };
+      incr row;
+
+      (* Show theme type explanation *)
+      draw_line "Built-in themes:" { none with foreground = Some lyellow };
+
+      List.iteri (fun i theme ->
+        let name = Color_theme.theme_name theme in
+        let desc = match theme with
+          | Types.ChromaticGradient -> "Colors by pitch class (C=red, G=blue...)"
+          | Types.DiatonicDegrees -> "Colors by scale degree (1=red, 5=yellow...)"
+          | Types.CustomPalette pname ->
+            (match Config.Palettes.find_by_name pname with
+             | Some p -> p.Config.Palettes.description
+             | None -> "Custom palette")
+        in
+        let prefix = if i = tstate.theme_index then "> " else "  " in
+        let style =
+          if i = tstate.theme_index then
+            { none with bold = Some true; foreground = Some lgreen }
+          else
+            { none with foreground = Some white }
+        in
+        draw_line (Fmt.str "%s%d. %s" prefix (i + 1) name) style;
+        (* Show description for selected theme *)
+        if i = tstate.theme_index then
+          draw_line (Fmt.str "     %s" desc) { none with foreground = Some lblue }
+      ) tstate.available_themes;
+
+      incr row;
+      draw_line "Up/Down or 1-9 to select, Enter to confirm, Esc to cancel"
+        { none with foreground = Some lcyan }
+
+    method! can_focus = false
+  end
+

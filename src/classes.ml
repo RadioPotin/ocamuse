@@ -387,8 +387,14 @@ class main_box ocamuse_context exit push_layer pop_layer =
             true
 
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'k' ->
-            (* Cycle color theme *)
-            ocamuse_context.color_theme <- Color_theme.cycle_theme ocamuse_context.color_theme;
+            (* Enter theme selection mode *)
+            App_state.enter_theme_selection app_state;
+            let tstate = match !(app_state.mode) with
+              | App_state.ThemeSelection ts -> ts
+              | _ -> failwith "Expected ThemeSelection"
+            in
+            let widget = new Selectors.theme_selector_widget tstate app_state in
+            self#show_selector_panel (widget :> LTerm_widget.t) " Select Theme ";
             self#queue_draw;
             true
 
@@ -462,6 +468,21 @@ class main_box ocamuse_context exit push_layer pop_layer =
                 (* Refresh widget with updated state *)
                 let widget = new Selectors.tuning_selector_widget new_tstate app_state in
                 self#show_selector_panel (widget :> LTerm_widget.t) " Select Tuning "
+            | _ -> ());
+            self#queue_draw;
+            true
+          end else false
+
+        | App_state.ThemeSelection _ ->
+          if Selectors.handle_theme_input app_state event then begin
+            (* Check if we returned to normal mode *)
+            (match !(app_state.mode) with
+            | App_state.Normal ->
+                self#hide_selector_panel
+            | App_state.ThemeSelection new_tstate ->
+                (* Refresh widget with updated state - theme preview is automatic *)
+                let widget = new Selectors.theme_selector_widget new_tstate app_state in
+                self#show_selector_panel (widget :> LTerm_widget.t) " Select Theme "
             | _ -> ());
             self#queue_draw;
             true

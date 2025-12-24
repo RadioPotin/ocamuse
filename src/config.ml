@@ -211,6 +211,69 @@ module Palettes = struct
         |]
     }
 
+  (** Colorblind-friendly palette - Deuteranopia (red-green blindness)
+      Uses blue-yellow axis which is preserved in most color vision deficiencies *)
+  let colorblind_deuteranopia =
+    { name = "Colorblind Safe"
+    ; description = "Blue-yellow safe for red-green color blindness"
+    ; colors =
+        [| lblue    (* C - Primary blue *)
+         ; blue     (* C# *)
+         ; lcyan    (* D *)
+         ; cyan     (* D# *)
+         ; lyellow  (* E *)
+         ; yellow   (* F *)
+         ; lwhite   (* F# - Tritone, neutral *)
+         ; lblue    (* G *)
+         ; blue     (* G# *)
+         ; lcyan    (* A *)
+         ; lyellow  (* A# *)
+         ; yellow   (* B *)
+        |]
+    }
+
+  (** Tritanopia-friendly palette - for blue-yellow color blindness
+      Uses red-cyan axis *)
+  let colorblind_tritanopia =
+    { name = "Tritanopia Safe"
+    ; description = "Red-cyan safe for blue-yellow color blindness"
+    ; colors =
+        [| lred     (* C - Primary red *)
+         ; red      (* C# *)
+         ; lmagenta (* D *)
+         ; magenta  (* D# *)
+         ; lcyan    (* E *)
+         ; cyan     (* F *)
+         ; lwhite   (* F# - Tritone, neutral *)
+         ; lred     (* G *)
+         ; red      (* G# *)
+         ; lmagenta (* A *)
+         ; lcyan    (* A# *)
+         ; cyan     (* B *)
+        |]
+    }
+
+  (** Grayscale palette - works for all color vision types
+      Uses brightness differences only *)
+  let grayscale =
+    { name = "Grayscale"
+    ; description = "Brightness-only for maximum accessibility"
+    ; colors =
+        [| lwhite   (* C - Brightest - tonic *)
+         ; white    (* C# *)
+         ; lblack   (* D *)
+         ; lwhite   (* D# *)
+         ; white    (* E *)
+         ; lblack   (* F *)
+         ; black    (* F# - Tritone, darkest *)
+         ; lwhite   (* G - Bright - dominant *)
+         ; white    (* G# *)
+         ; lblack   (* A *)
+         ; lwhite   (* A# *)
+         ; white    (* B *)
+        |]
+    }
+
   (** All available palettes *)
   let all_palettes =
     [ chromatic_rainbow
@@ -220,6 +283,9 @@ module Palettes = struct
     ; high_contrast
     ; pastel
     ; circle_of_fifths
+    ; colorblind_deuteranopia
+    ; colorblind_tritanopia
+    ; grayscale
     ]
 
   (** Get palette by name *)

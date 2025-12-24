@@ -211,26 +211,36 @@ let build_degree_tbl tonality =
   ) tonality;
   tbl
 
-(** Build color table: maps degrees to colors based on theme *)
-let build_degree_colour_tbl tonality color_theme =
-  let open LTerm_style in
-  let tbl = Hashtbl.create 7 in
-  let colors = match color_theme with
-    | Types.ChromaticGradient ->
-      [| lred; lyellow; lgreen; lcyan; lblue; lmagenta; lwhite |]
-    | Types.DiatonicDegrees ->
-      [| lred; lyellow; lgreen; lcyan; lblue; lmagenta; lwhite |]
-    | Types.CustomPalette _ ->
-      [| lred; lyellow; lgreen; lcyan; lblue; lmagenta; lwhite |]
-  in
-  List.iteri (fun degree _note ->
-    Hashtbl.add tbl degree colors.(degree mod 7)
-  ) tonality;
-  tbl
+(** Get semitone intervals for a chord type (from root) *)
+let chord_intervals (chord_type : Types.chord) =
+  match chord_type with
+  | Types.Major -> [0; 4; 7]              (* R, M3, P5 *)
+  | Types.Minor -> [0; 3; 7]              (* R, m3, P5 *)
+  | Types.Dimin -> [0; 3; 6]              (* R, m3, d5 *)
+  | Types.Augment -> [0; 4; 8]            (* R, M3, A5 *)
+  | Types.Suspend2 -> [0; 2; 7]           (* R, M2, P5 *)
+  | Types.Suspend4 -> [0; 5; 7]           (* R, P4, P5 *)
+  | Types.Major7 -> [0; 4; 7; 11]         (* R, M3, P5, M7 *)
+  | Types.Domin7 -> [0; 4; 7; 10]         (* R, M3, P5, m7 *)
+  | Types.Minor7 -> [0; 3; 7; 10]         (* R, m3, P5, m7 *)
+  | Types.HalfDim7 -> [0; 3; 6; 10]       (* R, m3, d5, m7 *)
+  | Types.Sixth -> [0; 4; 7; 9]           (* R, M3, P5, M6 *)
+  | Types.MinorSixth -> [0; 3; 7; 9]      (* R, m3, P5, M6 *)
 
-(** Build empty highlight tables (for chord/arpeggio - stubbed for now) *)
-let build_empty_highlight_tables () =
-  (Hashtbl.create 1, Hashtbl.create 1)
+(** Build chord notes from root and chord type - returns pitch classes *)
+let build_chord_pitch_classes root chord_type =
+  let root_pc = Conv.note_to_int root in
+  let intervals = chord_intervals chord_type in
+  List.map (fun interval -> (root_pc + interval) mod 12) intervals
+
+(** Build degree table for chord: maps pitch class (0-11) to chord degree (0-n) *)
+let build_chord_degree_tbl root chord_type =
+  let tbl = Hashtbl.create 12 in
+  let pitch_classes = build_chord_pitch_classes root chord_type in
+  List.iteri (fun degree pc ->
+    Hashtbl.replace tbl pc degree
+  ) pitch_classes;
+  tbl
 
 let select_view ctx ocamuse_context =
   let open Types in
@@ -238,7 +248,7 @@ let select_view ctx ocamuse_context =
     | Flat view -> view
     | Pattern (view, _scale) -> view
   in
-  let make_struc ctx scale view notes_to_degree_tbl degree_to_color_tbl
+  let make_struc ctx scale view notes_to_degree_tbl color_theme
     ocamuse_context : Types.pattern_view_draw_struc =
     let cursor_i = ref 0 in
     let cursor_j = ref 0 in
@@ -262,24 +272,22 @@ let select_view ctx ocamuse_context =
     ; number_of_frets
     ; number_of_strings
     ; notes_to_degree_tbl
-    ; degree_to_color_tbl
+    ; color_theme
     }
   in
   LTerm_draw.clear ctx;
   (* Build highlighting tables based on highlight_source *)
-  let (notes_to_degree_tbl, degree_to_colour_tbl) =
+  let notes_to_degree_tbl =
     match ocamuse_context.highlight_source with
     | Tonality (scale, root) ->
       let tonality = build_tonality scale root in
-      let notes_tbl = build_degree_tbl tonality in
-      let colour_tbl = build_degree_colour_tbl tonality ocamuse_context.color_theme in
-      (notes_tbl, colour_tbl)
-    | Chord (_root, _chord_type) ->
-      (* Stubbed for now - will use ocaml-music-theory later *)
-      build_empty_highlight_tables ()
-    | Arpeggio (_root, _chord_type) ->
-      (* Stubbed for now - will use ocaml-music-theory later *)
-      build_empty_highlight_tables ()
+      build_degree_tbl tonality
+    | Chord (root, chord_type) ->
+      (* Build chord degree table for highlighting *)
+      build_chord_degree_tbl root chord_type
+    | Arpeggio (root, chord_type) ->
+      (* Arpeggio uses same logic as chord *)
+      build_chord_degree_tbl root chord_type
   in
   let display_mode = !(ocamuse_context.display_mode) in
   let view = bubble_view display_mode in
@@ -287,14 +295,14 @@ let select_view ctx ocamuse_context =
     match display_mode with
     | Flat _base_colour ->
       let struc =
-        make_struc ctx Ionian view notes_to_degree_tbl degree_to_colour_tbl
-          ocamuse_context
+        make_struc ctx Ionian view notes_to_degree_tbl
+          ocamuse_context.color_theme ocamuse_context
       in
       Draw.PATTERN.pattern struc
     | Pattern (view, scale) ->
       let struc =
-        make_struc ctx scale view notes_to_degree_tbl degree_to_colour_tbl
-          ocamuse_context
+        make_struc ctx scale view notes_to_degree_tbl
+          ocamuse_context.color_theme ocamuse_context
       in
       Draw.PATTERN.pattern struc
   end

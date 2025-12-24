@@ -66,9 +66,14 @@ let is_equal color colour : bool =
 
 let find_color (struc : Types.pattern_view_draw_struc) note =
   let pitch_class = Conv.note_to_int note in
-  match Hashtbl.find_opt struc.notes_to_degree_tbl pitch_class with
-  | None -> struc.color
-  | Some degree -> Hashtbl.find struc.degree_to_color_tbl degree
+  let degree_opt = Hashtbl.find_opt struc.notes_to_degree_tbl pitch_class in
+  match degree_opt with
+  | None ->
+    (* Note not in scale - use base color for non-scale notes *)
+    struc.color
+  | Some degree ->
+    (* Note is in scale - color based on theme *)
+    Color_theme.get_note_color struc.color_theme note (Some degree)
 
 let random_base_colour =
   let open Types in

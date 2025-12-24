@@ -195,8 +195,8 @@ class keybindings_modal pop_layer_fn =
       draw_line "Modes:";
       draw_line "  t - Change tonality";
       draw_line "  u - Change tuning";
-      draw_line "  m - Cycle modes";
-      draw_line "  k - Color theme";
+      draw_line "  m - Cycle scales";
+      draw_line "  k - Select color theme";
       draw_line "  d - Debug borders";
       vbox#add (new LTerm_widget.hline);
 

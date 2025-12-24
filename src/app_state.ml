@@ -5,6 +5,7 @@ type app_mode =
   | Normal  (** Default mode - fretboard display and basic controls *)
   | TonalitySelection of tonality_state  (** Selecting root note and mode *)
   | TuningSelection of tuning_state  (** Selecting guitar tuning *)
+  | ThemeSelection of theme_state  (** Selecting color theme *)
   | MultiView of multi_view_state  (** Multi-view focus mode with multiple concurrent panels *)
 
 (** State for tonality selection *)
@@ -22,6 +23,13 @@ and tuning_state =
   { available_tunings : (string * Types.tuning) list  (** List of preset tunings *)
   ; selected_index : int  (** Currently highlighted tuning *)
   ; custom_editing : bool  (** Whether editing custom tuning *)
+  }
+
+(** State for theme selection *)
+and theme_state =
+  { available_themes : Types.color_theme list  (** All available themes *)
+  ; theme_index : int  (** Currently highlighted theme *)
+  ; preview_active : bool  (** Whether preview is being shown *)
   }
 
 (** State for multi-view mode *)
@@ -107,6 +115,29 @@ let enter_multi_view state =
       ; show_panel_controls = true
       }
 
+let enter_theme_selection state =
+  (* Build list of all themes: built-in + custom palettes *)
+  let all_themes =
+    Types.ChromaticGradient ::
+    Types.DiatonicDegrees ::
+    (List.map (fun p -> Types.CustomPalette p.Config.Palettes.name)
+       Config.Palettes.all_palettes)
+  in
+  (* Find current theme index *)
+  let current = state.context.color_theme in
+  let rec find_idx i = function
+    | [] -> 0
+    | t :: _ when t = current -> i
+    | _ :: rest -> find_idx (i + 1) rest
+  in
+  let current_idx = find_idx 0 all_themes in
+  state.mode :=
+    ThemeSelection
+      { available_themes = all_themes
+      ; theme_index = current_idx
+      ; preview_active = true  (* Always preview *)
+      }
+
 let return_to_normal state = state.mode := Normal
 
 (** Debug mode **)
@@ -134,4 +165,5 @@ let mode_name state =
   | Normal -> "Normal"
   | TonalitySelection _ -> "Tonality Selection"
   | TuningSelection _ -> "Tuning Selection"
+  | ThemeSelection _ -> "Theme Selection"
   | MultiView _ -> "Multi-View"
