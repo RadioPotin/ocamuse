@@ -12,8 +12,8 @@ let default_context ?(tuning = Config.default_tuning ()) () =
   ; base_colour = ref base_colour
   ; tuning
   ; root_note
-  ; mode = C_mode
-  ; highlight_source = Tonality (C_mode, root_note)
+  ; scale = Ionian
+  ; highlight_source = Tonality (Ionian, root_note)
   ; color_theme = CustomPalette "Circle of Fifths"
   }
 

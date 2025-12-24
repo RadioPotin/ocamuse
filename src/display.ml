@@ -1,22 +1,174 @@
 (** Display module - renders fretboard with highlighting *)
 
-(** Build a tonality (scale notes) from mode and root note *)
-let build_tonality mode root =
+(** Get all scale categories *)
+let all_categories =
   let open Types in
-  (* Major scale intervals: W W H W W W H = 2 2 1 2 2 2 1 *)
-  let major_intervals = [| 2; 2; 1; 2; 2; 2; 1 |] in
-  (* Mode rotation: how many steps to rotate the intervals *)
-  let rotation = match mode with
-    | C_mode -> 0  (* Ionian *)
-    | D_mode -> 1  (* Dorian *)
-    | E_mode -> 2  (* Phrygian *)
-    | F_mode -> 3  (* Lydian *)
-    | G_mode -> 4  (* Mixolydian *)
-    | A_mode -> 5  (* Aeolian *)
-    | B_mode -> 6  (* Locrian *)
-  in
-  (* Rotate intervals for the mode *)
-  let intervals = Array.init 7 (fun i -> major_intervals.((i + rotation) mod 7)) in
+  [Diatonic; HarmonicMinor; MelodicMinor; PentatonicBlues; Symmetric; Ethnic; Bebop]
+
+(** Get scales in a category *)
+let scales_in_category category =
+  let open Types in
+  match category with
+  | Diatonic -> [Ionian; Dorian; Phrygian; Lydian; Mixolydian; Aeolian; Locrian]
+  | HarmonicMinor -> [HarmonicMinor; LocrianNat6; IonianSharp5; DorianSharp4;
+                      PhrygianDominant; LydianSharp2; SuperLocrianbb7]
+  | MelodicMinor -> [MelodicMinor; DorianFlat2; LydianAugmented; LydianDominant;
+                     MixolydianFlat6; LocrianNat2; Altered]
+  | PentatonicBlues -> [MajorPentatonic; MinorPentatonic; BluesMajor; BluesMinor;
+                        Hirajoshi; InSen]
+  | Symmetric -> [WholeTone; DiminishedHW; DiminishedWH; Chromatic; Augmented; Tritone]
+  | Ethnic -> [HungarianMinor; DoubleHarmonic; Persian; Arabian; Japanese;
+               Egyptian; NeapolitanMinor; NeapolitanMajor]
+  | Bebop -> [BebopDominant; BebopMajor; BebopMinor; BebopDorian]
+
+(** Get category for a scale *)
+let category_of_scale scale =
+  let open Types in
+  match scale with
+  | Ionian | Dorian | Phrygian | Lydian | Mixolydian | Aeolian | Locrian -> Diatonic
+  | HarmonicMinor | LocrianNat6 | IonianSharp5 | DorianSharp4
+  | PhrygianDominant | LydianSharp2 | SuperLocrianbb7 -> HarmonicMinor
+  | MelodicMinor | DorianFlat2 | LydianAugmented | LydianDominant
+  | MixolydianFlat6 | LocrianNat2 | Altered -> MelodicMinor
+  | MajorPentatonic | MinorPentatonic | BluesMajor | BluesMinor
+  | Hirajoshi | InSen -> PentatonicBlues
+  | WholeTone | DiminishedHW | DiminishedWH | Chromatic | Augmented | Tritone -> Symmetric
+  | HungarianMinor | DoubleHarmonic | Persian | Arabian | Japanese
+  | Egyptian | NeapolitanMinor | NeapolitanMajor -> Ethnic
+  | BebopDominant | BebopMajor | BebopMinor | BebopDorian -> Bebop
+
+(** Get display name for a category *)
+let category_name category =
+  let open Types in
+  match category with
+  | Diatonic -> "Diatonic"
+  | HarmonicMinor -> "Harm. Minor"
+  | MelodicMinor -> "Mel. Minor"
+  | PentatonicBlues -> "Penta/Blues"
+  | Symmetric -> "Symmetric"
+  | Ethnic -> "Ethnic"
+  | Bebop -> "Bebop"
+
+(** Get display name for a scale *)
+let scale_name scale =
+  let open Types in
+  match scale with
+  (* Diatonic *)
+  | Ionian -> "Ionian (Major)"
+  | Dorian -> "Dorian"
+  | Phrygian -> "Phrygian"
+  | Lydian -> "Lydian"
+  | Mixolydian -> "Mixolydian"
+  | Aeolian -> "Aeolian (Minor)"
+  | Locrian -> "Locrian"
+  (* Harmonic Minor *)
+  | HarmonicMinor -> "Harmonic Minor"
+  | LocrianNat6 -> "Locrian nat6"
+  | IonianSharp5 -> "Ionian #5"
+  | DorianSharp4 -> "Dorian #4"
+  | PhrygianDominant -> "Phrygian Dom"
+  | LydianSharp2 -> "Lydian #2"
+  | SuperLocrianbb7 -> "Super Locr bb7"
+  (* Melodic Minor *)
+  | MelodicMinor -> "Melodic Minor"
+  | DorianFlat2 -> "Dorian b2"
+  | LydianAugmented -> "Lydian Aug"
+  | LydianDominant -> "Lydian Dom"
+  | MixolydianFlat6 -> "Mixolydian b6"
+  | LocrianNat2 -> "Locrian nat2"
+  | Altered -> "Altered"
+  (* Pentatonic & Blues *)
+  | MajorPentatonic -> "Major Penta"
+  | MinorPentatonic -> "Minor Penta"
+  | BluesMajor -> "Blues Major"
+  | BluesMinor -> "Blues Minor"
+  | Hirajoshi -> "Hirajoshi"
+  | InSen -> "In Sen"
+  (* Symmetric *)
+  | WholeTone -> "Whole Tone"
+  | DiminishedHW -> "Dim HW"
+  | DiminishedWH -> "Dim WH"
+  | Chromatic -> "Chromatic"
+  | Augmented -> "Augmented"
+  | Tritone -> "Tritone"
+  (* Ethnic *)
+  | HungarianMinor -> "Hungarian Min"
+  | DoubleHarmonic -> "Double Harm"
+  | Persian -> "Persian"
+  | Arabian -> "Arabian"
+  | Japanese -> "Japanese"
+  | Egyptian -> "Egyptian"
+  | NeapolitanMinor -> "Neapolitan Min"
+  | NeapolitanMajor -> "Neapolitan Maj"
+  (* Bebop *)
+  | BebopDominant -> "Bebop Dom"
+  | BebopMajor -> "Bebop Major"
+  | BebopMinor -> "Bebop Minor"
+  | BebopDorian -> "Bebop Dorian"
+
+(** Get intervals for a scale type. Returns list of semitone steps. *)
+let scale_intervals scale_type =
+  let open Types in
+  match scale_type with
+  (* Diatonic modes - 7 notes *)
+  | Ionian -> [2; 2; 1; 2; 2; 2; 1]
+  | Dorian -> [2; 1; 2; 2; 2; 1; 2]
+  | Phrygian -> [1; 2; 2; 2; 1; 2; 2]
+  | Lydian -> [2; 2; 2; 1; 2; 2; 1]
+  | Mixolydian -> [2; 2; 1; 2; 2; 1; 2]
+  | Aeolian -> [2; 1; 2; 2; 1; 2; 2]
+  | Locrian -> [1; 2; 2; 1; 2; 2; 2]
+  (* Harmonic minor modes - 7 notes *)
+  | HarmonicMinor -> [2; 1; 2; 2; 1; 3; 1]
+  | LocrianNat6 -> [1; 2; 2; 1; 3; 1; 2]
+  | IonianSharp5 -> [2; 2; 1; 3; 1; 2; 1]
+  | DorianSharp4 -> [2; 1; 3; 1; 2; 1; 2]
+  | PhrygianDominant -> [1; 3; 1; 2; 1; 2; 2]
+  | LydianSharp2 -> [3; 1; 2; 1; 2; 2; 1]
+  | SuperLocrianbb7 -> [1; 2; 1; 2; 2; 1; 3]
+  (* Melodic minor modes - 7 notes *)
+  | MelodicMinor -> [2; 1; 2; 2; 2; 2; 1]
+  | DorianFlat2 -> [1; 2; 2; 2; 2; 1; 2]
+  | LydianAugmented -> [2; 2; 2; 2; 1; 2; 1]
+  | LydianDominant -> [2; 2; 2; 1; 2; 1; 2]
+  | MixolydianFlat6 -> [2; 2; 1; 2; 1; 2; 2]
+  | LocrianNat2 -> [2; 1; 2; 1; 2; 2; 2]
+  | Altered -> [1; 2; 1; 2; 2; 2; 2]
+  (* Pentatonic & Blues - 5-6 notes *)
+  | MajorPentatonic -> [2; 2; 3; 2; 3]
+  | MinorPentatonic -> [3; 2; 2; 3; 2]
+  | BluesMajor -> [2; 1; 1; 3; 2; 3]
+  | BluesMinor -> [3; 2; 1; 1; 3; 2]
+  | Hirajoshi -> [2; 1; 4; 1; 4]
+  | InSen -> [1; 4; 2; 3; 2]
+  (* Symmetric - 6-12 notes *)
+  | WholeTone -> [2; 2; 2; 2; 2; 2]
+  | DiminishedHW -> [1; 2; 1; 2; 1; 2; 1; 2]
+  | DiminishedWH -> [2; 1; 2; 1; 2; 1; 2; 1]
+  | Chromatic -> [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1]
+  | Augmented -> [3; 1; 3; 1; 3; 1]
+  | Tritone -> [1; 3; 2; 1; 3; 2]
+  (* Ethnic/Exotic - 5-7 notes *)
+  | HungarianMinor -> [2; 1; 3; 1; 1; 3; 1]
+  | DoubleHarmonic -> [1; 3; 1; 2; 1; 3; 1]
+  | Persian -> [1; 3; 1; 1; 2; 3; 1]
+  | Arabian -> [2; 2; 1; 1; 2; 2; 2]
+  | Japanese -> [1; 4; 2; 1; 4]
+  | Egyptian -> [2; 3; 2; 3; 2]
+  | NeapolitanMinor -> [1; 2; 2; 2; 1; 3; 1]
+  | NeapolitanMajor -> [1; 2; 2; 2; 2; 2; 1]
+  (* Bebop - 8 notes *)
+  | BebopDominant -> [2; 2; 1; 2; 2; 1; 1; 1]
+  | BebopMajor -> [2; 2; 1; 2; 1; 1; 2; 1]
+  | BebopMinor -> [2; 1; 1; 1; 2; 2; 1; 2]
+  | BebopDorian -> [2; 1; 1; 1; 2; 2; 1; 2]
+
+(** Build a tonality (scale notes) from scale type and root note *)
+let build_tonality scale_type root =
+  let open Types in
+  let intervals = scale_intervals scale_type in
+  let num_notes = List.length intervals in
+
   (* Build scale starting from root *)
   let base_notes = [| C; D; E; F; G; A; B |] in
   let base_to_int = function C -> 0 | D -> 1 | E -> 2 | F -> 3 | G -> 4 | A -> 5 | B -> 6 in
@@ -30,13 +182,14 @@ let build_tonality mode root =
     (base_semitones + note.alteration + 12) mod 12
   in
 
-  (* Build scale notes *)
-  let scale = Array.make 7 root in
+  (* Build scale notes - handle variable length scales *)
+  let scale = Array.make num_notes root in
   let current_semitone = ref (note_to_semitone root) in
   let current_base_idx = ref (base_to_int root.base) in
+  let intervals_arr = Array.of_list intervals in
 
-  for i = 1 to 6 do
-    current_semitone := (!current_semitone + intervals.(i - 1)) mod 12;
+  for i = 1 to num_notes - 1 do
+    current_semitone := (!current_semitone + intervals_arr.(i - 1)) mod 12;
     current_base_idx := (!current_base_idx + 1) mod 7;
     let next_base = int_to_base !current_base_idx in
     let natural_semitone = match next_base with
@@ -83,9 +236,9 @@ let select_view ctx ocamuse_context =
   let open Types in
   let bubble_view = function
     | Flat view -> view
-    | Pattern (view, _mode) -> view
+    | Pattern (view, _scale) -> view
   in
-  let make_struc ctx mode view notes_to_degree_tbl degree_to_color_tbl
+  let make_struc ctx scale view notes_to_degree_tbl degree_to_color_tbl
     ocamuse_context : Types.pattern_view_draw_struc =
     let cursor_i = ref 0 in
     let cursor_j = ref 0 in
@@ -98,7 +251,7 @@ let select_view ctx ocamuse_context =
     let color = Color.event_to_base_color !(ocamuse_context.base_colour) in
     let number_of_frets = Array.length ocamuse_context.fretboard.notes.(0) in
     { ctx
-    ; mode
+    ; scale
     ; view
     ; color
     ; offset
@@ -116,8 +269,8 @@ let select_view ctx ocamuse_context =
   (* Build highlighting tables based on highlight_source *)
   let (notes_to_degree_tbl, degree_to_colour_tbl) =
     match ocamuse_context.highlight_source with
-    | Tonality (mode, root) ->
-      let tonality = build_tonality mode root in
+    | Tonality (scale, root) ->
+      let tonality = build_tonality scale root in
       let notes_tbl = build_degree_tbl tonality in
       let colour_tbl = build_degree_colour_tbl tonality ocamuse_context.color_theme in
       (notes_tbl, colour_tbl)
@@ -134,13 +287,13 @@ let select_view ctx ocamuse_context =
     match display_mode with
     | Flat _base_colour ->
       let struc =
-        make_struc ctx C_mode view notes_to_degree_tbl degree_to_colour_tbl
+        make_struc ctx Ionian view notes_to_degree_tbl degree_to_colour_tbl
           ocamuse_context
       in
       Draw.PATTERN.pattern struc
-    | Pattern (view, mode) ->
+    | Pattern (view, scale) ->
       let struc =
-        make_struc ctx mode view notes_to_degree_tbl degree_to_colour_tbl
+        make_struc ctx scale view notes_to_degree_tbl degree_to_colour_tbl
           ocamuse_context
       in
       Draw.PATTERN.pattern struc

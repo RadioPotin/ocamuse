@@ -10,7 +10,10 @@ type app_mode =
 (** State for tonality selection *)
 and tonality_state =
   { temp_root : Types.note option  (** Temporary root note being built *)
-  ; temp_mode : Types.mode option  (** Temporary mode selection *)
+  ; temp_scale : Types.scale_type option  (** Temporary scale selection *)
+  ; temp_category : Types.scale_category  (** Current category being browsed *)
+  ; category_index : int  (** Index within category list *)
+  ; scale_index : int  (** Index within current category's scales *)
   ; selection_step : selection_step  (** Current step in selection process *)
   }
 
@@ -33,7 +36,8 @@ and multi_view_state =
 and selection_step =
   | SelectingRoot  (** Choosing root note (A-G) *)
   | SelectingAlteration  (** Choosing sharp/flat *)
-  | SelectingMode  (** Choosing mode (1-7) *)
+  | SelectingCategory  (** Choosing scale category *)
+  | SelectingScale  (** Choosing scale within category *)
 
 (** Focus state for tab navigation *)
 type focus_target =
@@ -66,7 +70,13 @@ let make context =
 let enter_tonality_selection state =
   state.mode :=
     TonalitySelection
-      { temp_root = None; temp_mode = None; selection_step = SelectingRoot }
+      { temp_root = None
+      ; temp_scale = None
+      ; temp_category = Types.Diatonic
+      ; category_index = 0
+      ; scale_index = 0
+      ; selection_step = SelectingRoot
+      }
 
 let enter_tuning_selection state =
   let tunings =

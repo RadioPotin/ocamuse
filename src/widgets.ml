@@ -54,18 +54,10 @@ class context_panel (ocamuse_ctx : Types.ocamuse_structure) (app_state : App_sta
         draw_line (Fmt.str "Tuning: %s" tuning_str)
           { none with foreground = Some lgreen };
 
-        (* Root note and mode *)
+        (* Root note and scale *)
         let root_str = Pp.NOTES.FMT.sprint_note ocamuse_ctx.root_note in
-        let mode_str = match ocamuse_ctx.mode with
-          | Types.C_mode -> "Ionian (Major)"
-          | Types.D_mode -> "Dorian"
-          | Types.E_mode -> "Phrygian"
-          | Types.F_mode -> "Lydian"
-          | Types.G_mode -> "Mixolydian"
-          | Types.A_mode -> "Aeolian (Minor)"
-          | Types.B_mode -> "Locrian"
-        in
-        draw_line (Fmt.str "Key: %s %s" root_str mode_str)
+        let scale_str = Display.scale_name ocamuse_ctx.scale in
+        draw_line (Fmt.str "Key: %s %s" root_str scale_str)
           { none with foreground = Some lyellow };
 
         incr row;
@@ -88,12 +80,12 @@ class context_panel (ocamuse_ctx : Types.ocamuse_structure) (app_state : App_sta
           | Types.Flat (Types.Plain _) -> "View: Plain"
           | Types.Flat (Types.Fretted _) -> "View: Fretted"
           | Types.Flat (Types.Interline _) -> "View: Interline"
-          | Types.Pattern (Types.Plain _, m) ->
-              Fmt.str "View: Pattern (Plain, %a)" Pp.OCAMUSE.pp_mode m
-          | Types.Pattern (Types.Fretted _, m) ->
-              Fmt.str "View: Pattern (Fretted, %a)" Pp.OCAMUSE.pp_mode m
-          | Types.Pattern (Types.Interline _, m) ->
-              Fmt.str "View: Pattern (Interline, %a)" Pp.OCAMUSE.pp_mode m
+          | Types.Pattern (Types.Plain _, s) ->
+              Fmt.str "View: Pattern (Plain, %a)" Pp.OCAMUSE.pp_scale_type s
+          | Types.Pattern (Types.Fretted _, s) ->
+              Fmt.str "View: Pattern (Fretted, %a)" Pp.OCAMUSE.pp_scale_type s
+          | Types.Pattern (Types.Interline _, s) ->
+              Fmt.str "View: Pattern (Interline, %a)" Pp.OCAMUSE.pp_scale_type s
         in
         draw_line display_str { none with foreground = Some lblue }
 

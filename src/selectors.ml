@@ -22,12 +22,10 @@ let handle_tonality_input state event =
       App_state.return_to_normal state;
       true
     | Key { code = Char c; _ } ->
-      (* Convert Uchar to char - get first byte for ASCII *)
       let ch_code = Uchar.to_int c in
-      if ch_code > 127 then false (* Non-ASCII, ignore *)
+      if ch_code > 127 then false
       else begin
       let ch = Char.chr ch_code in
-      (* Handle character input based on which field is currently active *)
       (* Root field accepts a-g *)
       if (tstate.selection_step = App_state.SelectingRoot ||
           tstate.selection_step = App_state.SelectingAlteration) &&
@@ -37,7 +35,7 @@ let handle_tonality_input state event =
           let new_state =
             { tstate with
               temp_root = Some { base; alteration = 0 };
-              selection_step = App_state.SelectingAlteration  (* Advance to alteration step *)
+              selection_step = App_state.SelectingAlteration
             }
           in
           state.mode := App_state.TonalitySelection new_state;
@@ -65,69 +63,131 @@ let handle_tonality_input state event =
           true
         | None -> false
       end
-      (* Mode field accepts 1-7 *)
-      else if tstate.selection_step = App_state.SelectingMode && ch >= '1' && ch <= '7' then begin
-        let mode_idx = Char.code ch - Char.code '1' in
-        let mode = match mode_idx with
-          | 0 -> C_mode | 1 -> D_mode | 2 -> E_mode | 3 -> F_mode
-          | 4 -> G_mode | 5 -> A_mode | 6 -> B_mode | _ -> C_mode
-        in
-        let new_state = { tstate with temp_mode = Some mode } in
-        state.mode := App_state.TonalitySelection new_state;
-        true
-      end
       else false
       end
     | Key { code = Enter; _ } -> begin
-      match (tstate.temp_root, tstate.temp_mode) with
-      | (Some root, Some mode) ->
-        (* Both fields filled - apply the selection *)
-        state.context.root_note <- root;
-        state.context.mode <- mode;
-        (* Update highlight source to new tonality *)
-        state.context.highlight_source <- Types.Tonality (mode, root);
-        (* Ensure we're in Pattern mode to see the highlighting *)
-        let view = match !(state.context.display_mode) with
-          | Types.Flat v -> v
-          | Types.Pattern (v, _) -> v
-        in
-        state.context.display_mode := Types.Pattern (view, mode);
-        App_state.return_to_normal state;
-        true
-      | (Some _root, None) ->
-        (* Root is set but mode is not - advance to mode field *)
-        let new_state = { tstate with selection_step = App_state.SelectingMode } in
+      match tstate.selection_step with
+      | App_state.SelectingRoot | App_state.SelectingAlteration ->
+        (* Advance to category selection if root is set *)
+        (match tstate.temp_root with
+        | Some _ ->
+          let new_state = { tstate with selection_step = App_state.SelectingCategory } in
+          state.mode := App_state.TonalitySelection new_state;
+          true
+        | None -> false)
+      | App_state.SelectingCategory ->
+        (* Advance to scale selection within category *)
+        let new_state = { tstate with selection_step = App_state.SelectingScale } in
         state.mode := App_state.TonalitySelection new_state;
         true
-      | (None, _) ->
-        (* Root not set - stay on root field *)
-        false
+      | App_state.SelectingScale ->
+        (* Apply the selection *)
+        (match tstate.temp_root with
+        | Some root ->
+          let scales = Display.scales_in_category tstate.temp_category in
+          let scale = List.nth scales tstate.scale_index in
+          state.context.root_note <- root;
+          state.context.scale <- scale;
+          state.context.highlight_source <- Types.Tonality (scale, root);
+          let view = match !(state.context.display_mode) with
+            | Types.Flat v -> v
+            | Types.Pattern (v, _) -> v
+          in
+          state.context.display_mode := Types.Pattern (view, scale);
+          App_state.return_to_normal state;
+          true
+        | None -> false)
     end
     | Key { code = Up; _ } -> begin
-      (* Navigate backwards through selection steps *)
-      let new_step = match tstate.selection_step with
-        | App_state.SelectingMode -> App_state.SelectingAlteration
-        | App_state.SelectingAlteration -> App_state.SelectingRoot
-        | App_state.SelectingRoot -> App_state.SelectingRoot  (* Stay at first *)
-      in
-      let new_state = { tstate with selection_step = new_step } in
-      state.mode := App_state.TonalitySelection new_state;
-      true
+      match tstate.selection_step with
+      | App_state.SelectingRoot -> true  (* Stay at top *)
+      | App_state.SelectingAlteration ->
+        let new_state = { tstate with selection_step = App_state.SelectingRoot } in
+        state.mode := App_state.TonalitySelection new_state;
+        true
+      | App_state.SelectingCategory ->
+        (* Move to previous category *)
+        let num_cats = List.length Display.all_categories in
+        let new_idx = if tstate.category_index > 0 then tstate.category_index - 1 else num_cats - 1 in
+        let new_cat = List.nth Display.all_categories new_idx in
+        let new_state = { tstate with
+          category_index = new_idx;
+          temp_category = new_cat;
+          scale_index = 0  (* Reset scale selection when changing category *)
+        } in
+        state.mode := App_state.TonalitySelection new_state;
+        true
+      | App_state.SelectingScale ->
+        (* Move to previous scale in category *)
+        let scales = Display.scales_in_category tstate.temp_category in
+        let num_scales = List.length scales in
+        let new_idx = if tstate.scale_index > 0 then tstate.scale_index - 1 else num_scales - 1 in
+        let new_state = { tstate with scale_index = new_idx } in
+        state.mode := App_state.TonalitySelection new_state;
+        true
     end
     | Key { code = Down; _ } -> begin
-      (* Navigate forwards through selection steps *)
-      let new_step = match tstate.selection_step with
-        | App_state.SelectingRoot -> App_state.SelectingAlteration
-        | App_state.SelectingAlteration ->
-            (* Only advance to Mode if we have a root selected *)
-            (match tstate.temp_root with
-             | Some _ -> App_state.SelectingMode
-             | None -> App_state.SelectingAlteration)
-        | App_state.SelectingMode -> App_state.SelectingMode  (* Stay at last *)
-      in
-      let new_state = { tstate with selection_step = new_step } in
-      state.mode := App_state.TonalitySelection new_state;
-      true
+      match tstate.selection_step with
+      | App_state.SelectingRoot ->
+        let new_state = { tstate with selection_step = App_state.SelectingAlteration } in
+        state.mode := App_state.TonalitySelection new_state;
+        true
+      | App_state.SelectingAlteration ->
+        (match tstate.temp_root with
+        | Some _ ->
+          let new_state = { tstate with selection_step = App_state.SelectingCategory } in
+          state.mode := App_state.TonalitySelection new_state;
+          true
+        | None -> true)
+      | App_state.SelectingCategory ->
+        (* Move to next category *)
+        let num_cats = List.length Display.all_categories in
+        let new_idx = (tstate.category_index + 1) mod num_cats in
+        let new_cat = List.nth Display.all_categories new_idx in
+        let new_state = { tstate with
+          category_index = new_idx;
+          temp_category = new_cat;
+          scale_index = 0
+        } in
+        state.mode := App_state.TonalitySelection new_state;
+        true
+      | App_state.SelectingScale ->
+        (* Move to next scale in category *)
+        let scales = Display.scales_in_category tstate.temp_category in
+        let num_scales = List.length scales in
+        let new_idx = (tstate.scale_index + 1) mod num_scales in
+        let new_state = { tstate with scale_index = new_idx } in
+        state.mode := App_state.TonalitySelection new_state;
+        true
+    end
+    | Key { code = Left; _ } -> begin
+      match tstate.selection_step with
+      | App_state.SelectingCategory | App_state.SelectingScale ->
+        (* Go back a step *)
+        let new_step = match tstate.selection_step with
+          | App_state.SelectingScale -> App_state.SelectingCategory
+          | App_state.SelectingCategory -> App_state.SelectingAlteration
+          | step -> step
+        in
+        let new_state = { tstate with selection_step = new_step } in
+        state.mode := App_state.TonalitySelection new_state;
+        true
+      | _ -> false
+    end
+    | Key { code = Right; _ } -> begin
+      match tstate.selection_step with
+      | App_state.SelectingAlteration ->
+        (match tstate.temp_root with
+        | Some _ ->
+          let new_state = { tstate with selection_step = App_state.SelectingCategory } in
+          state.mode := App_state.TonalitySelection new_state;
+          true
+        | None -> false)
+      | App_state.SelectingCategory ->
+        let new_state = { tstate with selection_step = App_state.SelectingScale } in
+        state.mode := App_state.TonalitySelection new_state;
+        true
+      | _ -> false
     end
     | _ -> false
   end
@@ -249,8 +309,8 @@ class tonality_selector_widget (tstate : App_state.tonality_state) (app_state : 
     inherit LTerm_widget.t "tonality_selector"
 
     method! size_request =
-      (* Title + blank + root + mode + blank + instructions (up to 4 lines) + blank + nav *)
-      { LTerm_geom.rows = 12; cols = 60 }
+      (* More rows for category-based selection *)
+      { LTerm_geom.rows = 16; cols = 70 }
 
     method! draw ctx _focused =
       let open LTerm_draw in
@@ -283,16 +343,10 @@ class tonality_selector_widget (tstate : App_state.tonality_state) (app_state : 
         | Some note -> Pp.NOTES.FMT.sprint_note note
         | None -> "..."
       in
-      let mode_str = match tstate.temp_mode with
-        | Some Types.C_mode -> "Ionian (Major)"
-        | Some Types.D_mode -> "Dorian"
-        | Some Types.E_mode -> "Phrygian"
-        | Some Types.F_mode -> "Lydian"
-        | Some Types.G_mode -> "Mixolydian"
-        | Some Types.A_mode -> "Aeolian (Minor)"
-        | Some Types.B_mode -> "Locrian"
-        | None -> "..."
-      in
+      let category_str = Display.category_name tstate.temp_category in
+      let scales = Display.scales_in_category tstate.temp_category in
+      let scale = List.nth scales tstate.scale_index in
+      let scale_str = Display.scale_name scale in
 
       (* Highlight active field *)
       let root_style = match tstate.selection_step with
@@ -300,13 +354,19 @@ class tonality_selector_widget (tstate : App_state.tonality_state) (app_state : 
             { none with bold = Some true; foreground = Some lgreen }
         | _ -> { none with foreground = Some white }
       in
-      let mode_style = match tstate.selection_step with
-        | App_state.SelectingMode ->
+      let category_style = match tstate.selection_step with
+        | App_state.SelectingCategory ->
             { none with bold = Some true; foreground = Some lyellow }
         | _ -> { none with foreground = Some white }
       in
+      let scale_style = match tstate.selection_step with
+        | App_state.SelectingScale ->
+            { none with bold = Some true; foreground = Some lmagenta }
+        | _ -> { none with foreground = Some white }
+      in
       draw_line (Fmt.str "Root: %s" root_str) root_style;
-      draw_line (Fmt.str "Mode: %s" mode_str) mode_style;
+      draw_line (Fmt.str "Category: %s" category_str) category_style;
+      draw_line (Fmt.str "Scale: %s" scale_str) scale_style;
 
       incr row;
 
@@ -316,18 +376,41 @@ class tonality_selector_widget (tstate : App_state.tonality_state) (app_state : 
         draw_line "> Press a-g to set root note" { none with foreground = Some lblue }
       | App_state.SelectingAlteration ->
         draw_line "> Press a-g (root), # (sharp), or b (flat)"
-          { none with foreground = Some lblue }
-      | App_state.SelectingMode ->
-        draw_line "> Press 1-7 to set mode"
           { none with foreground = Some lblue };
+        draw_line "  Press Enter/Right to continue" { none with foreground = Some white }
+      | App_state.SelectingCategory ->
+        draw_line "> Use Up/Down to browse categories" { none with foreground = Some lblue };
         incr row;
-        draw_line "  1:Ionian 2:Dorian 3:Phrygian 4:Lydian"
-          { none with foreground = Some white };
-        draw_line "  5:Mixolydian 6:Aeolian 7:Locrian"
-          { none with foreground = Some white }
+        (* Show all categories *)
+        List.iteri (fun i cat ->
+          let name = Display.category_name cat in
+          let prefix = if i = tstate.category_index then "> " else "  " in
+          let style = if i = tstate.category_index then
+            { none with bold = Some true; foreground = Some lyellow }
+          else
+            { none with foreground = Some white }
+          in
+          draw_line (Fmt.str "%s%s" prefix name) style
+        ) Display.all_categories;
+        draw_line "  Press Enter/Right to select scales" { none with foreground = Some white }
+      | App_state.SelectingScale ->
+        draw_line "> Use Up/Down to browse scales" { none with foreground = Some lblue };
+        incr row;
+        (* Show scales in current category *)
+        List.iteri (fun i s ->
+          let name = Display.scale_name s in
+          let prefix = if i = tstate.scale_index then "> " else "  " in
+          let style = if i = tstate.scale_index then
+            { none with bold = Some true; foreground = Some lmagenta }
+          else
+            { none with foreground = Some white }
+          in
+          draw_line (Fmt.str "%s%s" prefix name) style
+        ) scales;
+        draw_line "  Press Enter to apply, Left to go back" { none with foreground = Some white }
       end;
       incr row;
-      draw_line "Use Up/Down to navigate, Enter to confirm" { none with foreground = Some lcyan }
+      draw_line "Esc to cancel" { none with foreground = Some lcyan }
 
     method! can_focus = false
   end

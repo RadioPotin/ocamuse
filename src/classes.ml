@@ -204,13 +204,9 @@ class status_bar (ocamuse_context : Types.ocamuse_structure) app_state =
       (* Mode indicator *)
       let mode_str = App_state.mode_name app_state in
       let root_str = Pp.NOTES.FMT.sprint_note ocamuse_context.root_note in
-      let scale_mode = match ocamuse_context.mode with
-        | Types.C_mode -> "Ion" | Types.D_mode -> "Dor" | Types.E_mode -> "Phr"
-        | Types.F_mode -> "Lyd" | Types.G_mode -> "Mix" | Types.A_mode -> "Aeo"
-        | Types.B_mode -> "Loc"
-      in
-      let status = Printf.sprintf " [%s] Key: %s %s | v:View h:Help t:Key u:Tuning m:Mode k:Theme Esc:Quit "
-        mode_str root_str scale_mode
+      let scale_name = Display.scale_name ocamuse_context.scale in
+      let status = Printf.sprintf " [%s] Key: %s %s | v:View h:Help t:Key u:Tuning m:Scale k:Theme Esc:Quit "
+        mode_str root_str scale_name
       in
       let len = min (String.length status) cols in
       for i = 0 to len - 1 do
@@ -369,14 +365,24 @@ class main_box ocamuse_context exit push_layer pop_layer =
             true
 
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'm' ->
-            (* Cycle through modes *)
-            let next_mode = match ocamuse_context.mode with
-              | Types.C_mode -> Types.D_mode | Types.D_mode -> Types.E_mode
-              | Types.E_mode -> Types.F_mode | Types.F_mode -> Types.G_mode
-              | Types.G_mode -> Types.A_mode | Types.A_mode -> Types.B_mode
-              | Types.B_mode -> Types.C_mode
+            (* Cycle through scales in current category *)
+            let current_category = Display.category_of_scale ocamuse_context.scale in
+            let scales = Display.scales_in_category current_category in
+            let rec find_idx i = function
+              | [] -> 0
+              | s :: _ when s = ocamuse_context.scale -> i
+              | _ :: rest -> find_idx (i + 1) rest
             in
-            ocamuse_context.mode <- next_mode;
+            let current_idx = find_idx 0 scales in
+            let next_idx = (current_idx + 1) mod List.length scales in
+            let next_scale = List.nth scales next_idx in
+            ocamuse_context.scale <- next_scale;
+            (* Update display mode and highlight source *)
+            ocamuse_context.highlight_source <- Types.Tonality (next_scale, ocamuse_context.root_note);
+            let view = match !(ocamuse_context.display_mode) with
+              | Types.Flat v -> v | Types.Pattern (v, _) -> v
+            in
+            ocamuse_context.display_mode := Types.Pattern (view, next_scale);
             self#queue_draw;
             true
 
@@ -388,11 +394,11 @@ class main_box ocamuse_context exit push_layer pop_layer =
 
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'r' ->
             (* Reset to tonality highlighting *)
-            ocamuse_context.highlight_source <- Types.Tonality (ocamuse_context.mode, ocamuse_context.root_note);
+            ocamuse_context.highlight_source <- Types.Tonality (ocamuse_context.scale, ocamuse_context.root_note);
             let view = match !(ocamuse_context.display_mode) with
               | Types.Flat v -> v | Types.Pattern (v, _) -> v
             in
-            ocamuse_context.display_mode := Types.Pattern (view, ocamuse_context.mode);
+            ocamuse_context.display_mode := Types.Pattern (view, ocamuse_context.scale);
             self#queue_draw;
             true
 

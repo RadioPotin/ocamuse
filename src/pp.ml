@@ -331,6 +331,41 @@ module OCAMUSE = struct
     | A_mode -> pf fmt "A_mode"
     | B_mode -> pf fmt "B_mode"
 
+  let pp_scale_type fmt scale =
+    let name = match scale with
+      (* Diatonic *)
+      | Ionian -> "Ionian" | Dorian -> "Dorian" | Phrygian -> "Phrygian"
+      | Lydian -> "Lydian" | Mixolydian -> "Mixolydian" | Aeolian -> "Aeolian"
+      | Locrian -> "Locrian"
+      (* Harmonic Minor *)
+      | HarmonicMinor -> "Harm.Min" | LocrianNat6 -> "Locr.nat6"
+      | IonianSharp5 -> "Ion.#5" | DorianSharp4 -> "Dor.#4"
+      | PhrygianDominant -> "Phryg.Dom" | LydianSharp2 -> "Lyd.#2"
+      | SuperLocrianbb7 -> "SupLocr.bb7"
+      (* Melodic Minor *)
+      | MelodicMinor -> "Mel.Min" | DorianFlat2 -> "Dor.b2"
+      | LydianAugmented -> "Lyd.Aug" | LydianDominant -> "Lyd.Dom"
+      | MixolydianFlat6 -> "Mix.b6" | LocrianNat2 -> "Locr.nat2"
+      | Altered -> "Altered"
+      (* Pentatonic & Blues *)
+      | MajorPentatonic -> "Maj.Penta" | MinorPentatonic -> "Min.Penta"
+      | BluesMajor -> "BluesMaj" | BluesMinor -> "BluesMin"
+      | Hirajoshi -> "Hirajoshi" | InSen -> "InSen"
+      (* Symmetric *)
+      | WholeTone -> "WholeTone" | DiminishedHW -> "Dim.HW"
+      | DiminishedWH -> "Dim.WH" | Chromatic -> "Chromatic"
+      | Augmented -> "Augmented" | Tritone -> "Tritone"
+      (* Ethnic *)
+      | HungarianMinor -> "Hung.Min" | DoubleHarmonic -> "Dbl.Harm"
+      | Persian -> "Persian" | Arabian -> "Arabian" | Japanese -> "Japanese"
+      | Egyptian -> "Egyptian" | NeapolitanMinor -> "Neap.Min"
+      | NeapolitanMajor -> "Neap.Maj"
+      (* Bebop *)
+      | BebopDominant -> "BebopDom" | BebopMajor -> "BebopMaj"
+      | BebopMinor -> "BebopMin" | BebopDorian -> "BebopDor"
+    in
+    pf fmt "%s" name
+
   let pp_base_colour fmt = function
     | Black -> pf fmt "Black"
     | Lblack -> pf fmt "Lblack"
@@ -345,18 +380,18 @@ module OCAMUSE = struct
   let pp_display_mode fmt dm =
     let aux fmt = function
       | Flat view -> pf fmt "View:&&&Flat:%a" pp_view view
-      | Pattern (view, mode) ->
-        pf fmt "View:&&&Pattern:%a&&&Mode:%a" pp_view view pp_mode mode
+      | Pattern (view, scale) ->
+        pf fmt "View:&&&Pattern:%a&&&Scale:%a" pp_view view pp_scale_type scale
     in
     pf fmt "DISPLAY:%a" aux dm
 
   let pp_tuning fmt n_l =
     list ~sep:(fun fmt () -> string fmt "=") NOTES.FMT.print_note fmt n_l
 
-  let context fmt { display_mode; base_colour; tuning; root_note; mode; _ } =
+  let context fmt { display_mode; base_colour; tuning; root_note; scale; _ } =
     pf fmt "%a|||" pp_display_mode !display_mode;
     pf fmt "%a|||" pp_base_colour !base_colour;
-    pf fmt "%a|||" pp_mode mode;
+    pf fmt "%a|||" pp_scale_type scale;
     pf fmt "%a|||" pp_tuning tuning;
     pf fmt "%a|||" NOTES.FMT.print_note root_note;
     pf fmt "@\n"

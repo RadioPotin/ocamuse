@@ -3,14 +3,47 @@ type parse_error =
   | InvalidNoteRange of int
   | InvalidMode of string
 
+(** Scale categories for grouping scales in the UI *)
+type scale_category =
+  | Diatonic
+  | HarmonicMinor
+  | MelodicMinor
+  | PentatonicBlues
+  | Symmetric
+  | Ethnic
+  | Bebop
+
+(** Comprehensive scale type supporting 45+ scales *)
+type scale_type =
+  (* Diatonic modes - 7 scales *)
+  | Ionian | Dorian | Phrygian | Lydian | Mixolydian | Aeolian | Locrian
+  (* Harmonic minor modes - 7 scales *)
+  | HarmonicMinor | LocrianNat6 | IonianSharp5 | DorianSharp4
+  | PhrygianDominant | LydianSharp2 | SuperLocrianbb7
+  (* Melodic minor modes - 7 scales *)
+  | MelodicMinor | DorianFlat2 | LydianAugmented | LydianDominant
+  | MixolydianFlat6 | LocrianNat2 | Altered
+  (* Pentatonic & Blues - 6 scales *)
+  | MajorPentatonic | MinorPentatonic | BluesMajor | BluesMinor
+  | Hirajoshi | InSen
+  (* Symmetric - 6 scales *)
+  | WholeTone | DiminishedHW | DiminishedWH | Chromatic
+  | Augmented | Tritone
+  (* Ethnic/Exotic - 8 scales *)
+  | HungarianMinor | DoubleHarmonic | Persian | Arabian
+  | Japanese | Egyptian | NeapolitanMinor | NeapolitanMajor
+  (* Bebop - 4 scales *)
+  | BebopDominant | BebopMajor | BebopMinor | BebopDorian
+
+(** Legacy mode type - alias for diatonic scales for backward compatibility *)
 type mode =
-  | C_mode
-  | D_mode
-  | E_mode
-  | F_mode
-  | G_mode
-  | A_mode
-  | B_mode
+  | C_mode  (* Ionian *)
+  | D_mode  (* Dorian *)
+  | E_mode  (* Phrygian *)
+  | F_mode  (* Lydian *)
+  | G_mode  (* Mixolydian *)
+  | A_mode  (* Aeolian *)
+  | B_mode  (* Locrian *)
 
 (** [base_note] is one of the 7 alternatives in the Western notation *)
 type base_note =
@@ -85,10 +118,10 @@ type fretboard_data =
 
 type display =
   | Flat of view
-  | Pattern of view * mode
+  | Pattern of view * scale_type
 
 type highlight_source =
-  | Tonality of mode * note
+  | Tonality of scale_type * note
   | Chord of note * chord
   | Arpeggio of note * chord
 
@@ -99,7 +132,7 @@ type color_theme =
 
 type pattern_view_draw_struc =
   { view : view
-  ; mode : mode
+  ; scale : scale_type
   ; string : int ref
   ; offset : int ref
   ; cursor_i : int ref
@@ -119,7 +152,7 @@ type ocamuse_structure =
   ; base_colour : base_colour ref
   ; mutable tuning : tuning
   ; mutable root_note : note
-  ; mutable mode : mode
+  ; mutable scale : scale_type
   ; mutable highlight_source : highlight_source
   ; mutable color_theme : color_theme
   }
