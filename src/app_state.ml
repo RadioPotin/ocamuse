@@ -3,13 +3,9 @@
 (** Application modes - each mode has different keyboard shortcuts and behavior *)
 type app_mode =
   | Normal  (** Default mode - fretboard display and basic controls *)
-  | Help  (** Help overlay showing keyboard shortcuts *)
   | TonalitySelection of tonality_state  (** Selecting root note and mode *)
   | TuningSelection of tuning_state  (** Selecting guitar tuning *)
-  | PaletteSelection of palette_state  (** Selecting color palette *)
-  | ChordMode of chord_state  (** Displaying chord diagrams *)
-  | ArpeggioMode of arpeggio_state  (** Showing arpeggio patterns *)
-  | ProgressionMode of progression_state  (** Building chord progressions *)
+  | MultiView of multi_view_state  (** Multi-view focus mode with multiple concurrent panels *)
 
 (** State for tonality selection *)
 and tonality_state =
@@ -25,32 +21,12 @@ and tuning_state =
   ; custom_editing : bool  (** Whether editing custom tuning *)
   }
 
-(** State for palette selection *)
-and palette_state =
-  { available_palettes : Config.Palettes.palette list  (** List of available palettes *)
-  ; palette_index : int  (** Currently highlighted palette *)
-  }
-
-(** State for chord mode *)
-and chord_state =
-  { selected_chord : (Types.note * Types.diatonic_triad) option
-  ; inversion : int  (** 0 = root position, 1 = 1st inversion, 2 = 2nd inversion *)
-  ; voicings : Theory.chord_voicing list  (** Available voicings for the selected chord *)
-  ; voicing_index : int  (** Currently selected voicing (0-based) *)
-  }
-
-(** State for arpeggio mode *)
-and arpeggio_state =
-  { arp_chord : (Types.note * Types.chord) option
-  ; arp_pattern : arpeggio_pattern
-  ; arp_speed : int  (** Animation speed *)
-  }
-
-(** State for progression builder *)
-and progression_state =
-  { progression : int list  (** List of scale degrees (0-6) *)
-  ; current_position : int  (** Current chord being played/edited *)
-  ; preview_mode : bool  (** Whether previewing the progression *)
+(** State for multi-view mode *)
+and multi_view_state =
+  { sync_context : Multi_view.Sync.sync_context  (** Synchronization state between panels *)
+  ; layout_config : Multi_view.Layout.layout_config  (** Layout configuration *)
+  ; focused_panel_id : string option  (** ID of currently focused panel, None = fretboard *)
+  ; show_panel_controls : bool  (** Whether to show panel control bar *)
   }
 
 (** Selection steps for tonality *)
@@ -58,13 +34,6 @@ and selection_step =
   | SelectingRoot  (** Choosing root note (A-G) *)
   | SelectingAlteration  (** Choosing sharp/flat *)
   | SelectingMode  (** Choosing mode (1-7) *)
-
-(** Arpeggio patterns *)
-and arpeggio_pattern =
-  | Ascending
-  | Descending
-  | Alternating
-  | Random
 
 (** Focus state for tab navigation *)
 type focus_target =
@@ -94,14 +63,6 @@ let make context =
   }
 
 (** State transitions *)
-let enter_help state =
-  state.mode := Help;
-  state.help_visible := true
-
-let exit_help state =
-  state.mode := Normal;
-  state.help_visible := false
-
 let enter_tonality_selection state =
   state.mode :=
     TonalitySelection
@@ -121,19 +82,20 @@ let enter_tuning_selection state =
     TuningSelection
       { available_tunings = tunings; selected_index = 0; custom_editing = false }
 
-let enter_chord_mode state =
+let enter_multi_view state =
+  (* Create initial multi-view state with no panels *)
+  let sync_context =
+    { Multi_view.Sync.fretboard = Multi_view.Sync.initial_fretboard_state
+    ; panels = []
+    }
+  in
   state.mode :=
-    ChordMode
-      { selected_chord = None; inversion = 0; voicings = []; voicing_index = 0 }
-
-let enter_arpeggio_mode state =
-  state.mode :=
-    ArpeggioMode { arp_chord = None; arp_pattern = Ascending; arp_speed = 500 }
-
-let enter_progression_mode state =
-  state.mode :=
-    ProgressionMode
-      { progression = []; current_position = 0; preview_mode = false }
+    MultiView
+      { sync_context
+      ; layout_config = Multi_view.Layout.default_config
+      ; focused_panel_id = None
+      ; show_panel_controls = true
+      }
 
 let return_to_normal state = state.mode := Normal
 
@@ -160,10 +122,6 @@ let is_normal state = match !(state.mode) with Normal -> true | _ -> false
 let mode_name state =
   match !(state.mode) with
   | Normal -> "Normal"
-  | Help -> "Help"
   | TonalitySelection _ -> "Tonality Selection"
   | TuningSelection _ -> "Tuning Selection"
-  | PaletteSelection _ -> "Palette Selection"
-  | ChordMode _ -> "Chord Mode"
-  | ArpeggioMode _ -> "Arpeggio Mode"
-  | ProgressionMode _ -> "Progression Mode"
+  | MultiView _ -> "Multi-View"

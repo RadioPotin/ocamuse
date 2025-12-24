@@ -1,0 +1,4 @@
+(library
+ (name multi_view)
+ (libraries ocaml-music-theory lambda-term lwt)
+ (modules panel layout sync))

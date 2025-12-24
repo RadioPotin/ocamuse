@@ -1,4 +1,4 @@
-(** Widget library for interactive panels *)
+(** Widget library for interactive panels - simplified *)
 
 (** Helper to draw a string using LTerm *)
 let draw_text_line ctx row_pos col_pos text style =
@@ -68,52 +68,19 @@ class context_panel (ocamuse_ctx : Types.ocamuse_structure) (app_state : App_sta
         draw_line (Fmt.str "Key: %s %s" root_str mode_str)
           { none with foreground = Some lyellow };
 
-        (* Tonality *)
-        let tonality = Theory.build_tonality ocamuse_ctx.mode ocamuse_ctx.root_note in
-        let tonality_str =
-          String.concat " "
-            (List.map (fun note -> Pp.NOTES.FMT.sprint_note note) tonality)
-        in
-        draw_line (Fmt.str "Scale: %s" tonality_str)
-          { none with foreground = Some lwhite };
-
         incr row;
 
-        (* Highlight source *)
+        (* Highlight source - simplified *)
         let highlight_str = match ocamuse_ctx.highlight_source with
           | Types.Tonality (_, _) -> "Highlighting: Tonality"
-          | Types.Chord (root, chord_type) ->
-              let chord_name = Theory.name_chord root chord_type in
-              Fmt.str "Highlighting: Chord (%s)" chord_name
-          | Types.Arpeggio (root, chord_type) ->
-              let chord_name = Theory.name_chord root chord_type in
-              Fmt.str "Highlighting: Arpeggio (%s)" chord_name
+          | Types.Chord (_, _) -> "Highlighting: Chord"
+          | Types.Arpeggio (_, _) -> "Highlighting: Arpeggio"
         in
         draw_line highlight_str { none with foreground = Some lcyan };
 
         (* Color theme *)
         let theme_str = Fmt.str "Color Theme: %s" (Color_theme.theme_name ocamuse_ctx.color_theme) in
         draw_line theme_str { none with foreground = Some lmagenta };
-
-        incr row;
-
-        (* Diatonic chords *)
-        draw_line "Diatonic Chords:" { none with bold = Some true; foreground = Some lmagenta };
-        let chords = Theory.build_diatonic_triads_sequence ocamuse_ctx.mode ocamuse_ctx.root_note in
-        List.iteri (fun i (note, chord) ->
-          let roman = match i with
-            | 0 -> "I" | 1 -> "ii" | 2 -> "iii" | 3 -> "IV"
-            | 4 -> "V" | 5 -> "vi" | 6 -> "vii°" | _ -> ""
-          in
-          let chord_name = Theory.name_chord note
-            (match chord with
-             | Types.Major -> Types.Major
-             | Types.Minor -> Types.Minor
-             | Types.Diminished -> Types.Dimin)
-          in
-          draw_line (Fmt.str "  %s: %s" roman chord_name)
-            { none with foreground = Some white }
-        ) chords;
 
         (* Display mode indicator *)
         incr row;
@@ -203,6 +170,9 @@ class keybindings_modal pop_layer_fn =
         | Key { code = Char c; _ } when Uchar.to_int c = Char.code '?' || Uchar.to_int c = Char.code 'h' ->
           pop_layer_fn ();
           true
+        | Key { code = Escape; _ } ->
+          pop_layer_fn ();
+          true
         | _ -> false
       );
 
@@ -218,6 +188,7 @@ class keybindings_modal pop_layer_fn =
       (* Global shortcuts *)
       draw_line "Global:";
       draw_line "  ?/h - Toggle this modal";
+      draw_line "  v - Toggle Harmony View";
       draw_line "  r - Reset highlighting";
       draw_line "  Esc - Exit/Cancel";
       vbox#add (new LTerm_widget.hline);
@@ -225,45 +196,17 @@ class keybindings_modal pop_layer_fn =
       (* Navigation *)
       draw_line "Navigation:";
       draw_line "  PgUp/Dn - Change color";
-      draw_line "  Enter - Cycle view";
-      draw_line "  Tab - Cycle focus";
+      draw_line "  Enter - Cycle view mode";
       vbox#add (new LTerm_widget.hline);
 
       (* Mode selection *)
       draw_line "Modes:";
       draw_line "  t - Change tonality";
       draw_line "  u - Change tuning";
-      draw_line "  c - Chord diagrams";
-      draw_line "  a - Arpeggio mode";
       draw_line "  m - Cycle modes";
       draw_line "  k - Color theme";
       draw_line "  d - Debug borders";
       vbox#add (new LTerm_widget.hline);
 
-      (* Mode-specific *)
-      draw_line "Chord Mode:";
-      draw_line "  1-7 - Select chord";
-      draw_line "  i - Inversion";
-      draw_line "  v - Voicing";
-      vbox#add (new LTerm_widget.hline);
-
-      draw_line "Arpeggio Mode:";
-      draw_line "  1-7 - Select chord";
-      vbox#add (new LTerm_widget.hline);
-
-      draw_line "Press ? or h to close"
-  end
-
-
-(** Simple status line widget *)
-class status_line message =
-  object
-    inherit LTerm_widget.t "status_line"
-
-    method! draw ctx _focused =
-      let open LTerm_style in
-      draw_text_line ctx 0 0 message
-        { none with foreground = Some lwhite; background = Some lblack }
-
-    method! can_focus = false
+      draw_line "Press ? or h or Esc to close"
   end

@@ -1,0 +1,4 @@
+(library
+ (name chord_suggestions)
+ (libraries ocaml-music-theory)
+ (modules chord_suggestions))

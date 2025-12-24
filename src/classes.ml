@@ -1,3 +1,5 @@
+(** Main UI classes for ocamuse - Multi-view architecture *)
+
 let update_color rotate =
   let open Types in
   function
@@ -9,6 +11,7 @@ let bubble_view =
   let open Types in
   function Flat view -> view | Pattern (view, _mode) -> view
 
+(** Fretboard widget - handles fretboard-specific events *)
 class fretboard_widget ocamuse_context =
   object (self)
     inherit LTerm_widget.t "fretboard"
@@ -21,36 +24,26 @@ class fretboard_widget ocamuse_context =
         | Flat view -> begin
           match event with
           | Key { code = Prev_page; _ } ->
-            (* Rotate color backward *)
             ocamuse_context.base_colour :=
               Color.rotate_to_prev !(ocamuse_context.base_colour);
             ocamuse_context.display_mode :=
-              Flat
-                ( update_color Color.rotate_to_prev
-                @@ bubble_view !(ocamuse_context.display_mode) );
+              Flat (update_color Color.rotate_to_prev @@ bubble_view !(ocamuse_context.display_mode));
             self#queue_draw;
             true
           | Key { code = Next_page; _ } ->
-            (* Rotate color forward *)
             ocamuse_context.base_colour :=
               Color.rotate_to_next !(ocamuse_context.base_colour);
             ocamuse_context.display_mode :=
-              Flat
-                ( update_color Color.rotate_to_next
-                @@ bubble_view !(ocamuse_context.display_mode) );
+              Flat (update_color Color.rotate_to_next @@ bubble_view !(ocamuse_context.display_mode));
             self#queue_draw;
             true
           | Key { code = Enter; _ } ->
             begin
               match !(ocamuse_context.display_mode) with
-              | Flat (Plain color) ->
-                ocamuse_context.display_mode := Flat (Interline color)
-              | Flat (Fretted color) ->
-                ocamuse_context.display_mode := Flat (Plain color)
-              | Flat (Interline color) ->
-                ocamuse_context.display_mode := Flat (Fretted color)
+              | Flat (Plain color) -> ocamuse_context.display_mode := Flat (Interline color)
+              | Flat (Fretted color) -> ocamuse_context.display_mode := Flat (Plain color)
+              | Flat (Interline color) -> ocamuse_context.display_mode := Flat (Fretted color)
               | Pattern _ -> ()
-                (* Unreachable: outer match already filters for Flat view *)
             end;
             self#queue_draw;
             true
@@ -58,16 +51,6 @@ class fretboard_widget ocamuse_context =
             ocamuse_context.display_mode := Flat view;
             self#queue_draw;
             true
-          | Key { code = Escape; _ } ->
-            (* Exit Pattern view *)
-            begin
-              match !(ocamuse_context.display_mode) with
-              | Pattern (view, _) ->
-                ocamuse_context.display_mode := Flat view;
-                self#queue_draw;
-                true
-              | _ -> true
-            end
           | _ -> false
         end
         | Pattern (view, mode) -> begin
@@ -77,27 +60,19 @@ class fretboard_widget ocamuse_context =
           | Key { code = Enter; _ } ->
             begin
               match !(ocamuse_context.display_mode) with
-              | Pattern (Plain color, mode) ->
-                ocamuse_context.display_mode := Pattern (Interline color, mode)
-              | Pattern (Fretted color, mode) ->
-                ocamuse_context.display_mode := Pattern (Plain color, mode)
-              | Pattern (Interline color, mode) ->
-                ocamuse_context.display_mode := Pattern (Fretted color, mode)
+              | Pattern (Plain color, mode) -> ocamuse_context.display_mode := Pattern (Interline color, mode)
+              | Pattern (Fretted color, mode) -> ocamuse_context.display_mode := Pattern (Plain color, mode)
+              | Pattern (Interline color, mode) -> ocamuse_context.display_mode := Pattern (Fretted color, mode)
               | Flat _ -> ()
-                (* Unreachable: outer match already filters for Pattern view *)
             end;
             self#queue_draw;
             true
           | Key { code = Prev_page; _ } ->
-            (* blue fretboard *)
-            ocamuse_context.display_mode :=
-              Pattern (update_color Color.rotate_to_prev view, mode);
+            ocamuse_context.display_mode := Pattern (update_color Color.rotate_to_prev view, mode);
             self#queue_draw;
             true
           | Key { code = Next_page; _ } ->
-            (* green fretboard *)
-            ocamuse_context.display_mode :=
-              Pattern (update_color Color.rotate_to_next view, mode);
+            ocamuse_context.display_mode := Pattern (update_color Color.rotate_to_next view, mode);
             self#queue_draw;
             true
           | Key { code = Backspace; _ } ->
@@ -105,11 +80,11 @@ class fretboard_widget ocamuse_context =
             self#queue_draw;
             true
           | _ -> false
-        end )
+        end)
   end
 
+(** Fretboard frame - contains fretboard widget with frame and label *)
 class frame_board ocamuse_context =
-  (* This function sets the location (and size) of the ctx inside which a fretboard is drawn *)
   let allocate_view_ctx ctx ocacont =
     let open Types in
     let open LTerm_draw in
@@ -118,84 +93,61 @@ class frame_board ocamuse_context =
       let { rows; cols } = size ctx in
       let center_row = rows / 2 in
       let center_col = cols / 2 in
-      begin
-        match view with
-        | Plain _ ->
-          let best_effort_print_width =
-            let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
-            ((s_len - 1) * 3) + 3
-            (* number of frets minus 0th * the plain spacing by fret + length of fret 0 *)
-          in
-          let number_of_strings = Array.length ocacont.fretboard.notes in
-          let row1 = max 0 (center_row - (number_of_strings / 2)) in
-          let row2 = min rows (row1 + number_of_strings + 2) in
-          let col1 = max 0 (center_col - (best_effort_print_width / 2)) in
-          let col2 = min cols (col1 + best_effort_print_width) in
-          { row1; row2; col1; col2 }
-        | Fretted _ ->
-          let number_of_strings = Array.length ocacont.fretboard.notes in
-          let best_effort_print_width =
-            let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
-            ((s_len - 1) * 8) + 4
-            (* number of frets minus 0th * the fretted spacing by fret + length of fret 0 *)
-          in
-          let row1 = max 0 (center_row - (number_of_strings / 2)) in
-          let row2 = min rows (row1 + number_of_strings + 2) in
-          let col1 = max 0 (center_col - (best_effort_print_width / 2)) in
-          let col2 = min cols (col1 + best_effort_print_width) in
-          { row1; row2; col1; col2 }
-        | Interline _ ->
-          let number_of_strings = Array.length ocacont.fretboard.notes in
-          let best_effort_print_height =
-            (number_of_strings * 2) + 1 + 1
-            (* number of strings * the interline spacing + top spacing after fret nb + bottom spacing after string 1 *)
-          in
-          let best_effort_print_width =
-            let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
-            ((s_len - 1) * 8) + 4
-            (* number of frets minus 0th * the interline spacing by fret + length of fret 0 *)
-          in
-          let row1 =
-            max 0 (center_row - ((best_effort_print_height + 1) / 2))
-          in
-          let row2 = min rows (row1 + best_effort_print_height) in
-          let col1 = max 0 (center_col - (best_effort_print_width / 2)) in
-          let col2 = min cols (col1 + best_effort_print_width) in
-          { row1; row2; col1; col2 }
-      end
+      match view with
+      | Plain _ ->
+        let best_effort_print_width =
+          let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
+          ((s_len - 1) * 3) + 3
+        in
+        let number_of_strings = Array.length ocacont.fretboard.notes in
+        let row1 = max 0 (center_row - (number_of_strings / 2)) in
+        let row2 = min rows (row1 + number_of_strings + 2) in
+        let col1 = max 0 (center_col - (best_effort_print_width / 2)) in
+        let col2 = min cols (col1 + best_effort_print_width) in
+        { row1; row2; col1; col2 }
+      | Fretted _ ->
+        let number_of_strings = Array.length ocacont.fretboard.notes in
+        let best_effort_print_width =
+          let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
+          ((s_len - 1) * 8) + 4
+        in
+        let row1 = max 0 (center_row - (number_of_strings / 2)) in
+        let row2 = min rows (row1 + number_of_strings + 2) in
+        let col1 = max 0 (center_col - (best_effort_print_width / 2)) in
+        let col2 = min cols (col1 + best_effort_print_width) in
+        { row1; row2; col1; col2 }
+      | Interline _ ->
+        let number_of_strings = Array.length ocacont.fretboard.notes in
+        let best_effort_print_height = (number_of_strings * 2) + 1 + 1 in
+        let best_effort_print_width =
+          let s_len = Array.length ocamuse_context.fretboard.notes.(0) in
+          ((s_len - 1) * 8) + 4
+        in
+        let row1 = max 0 (center_row - ((best_effort_print_height + 1) / 2)) in
+        let row2 = min rows (row1 + best_effort_print_height) in
+        let col1 = max 0 (center_col - (best_effort_print_width / 2)) in
+        let col2 = min cols (col1 + best_effort_print_width) in
+        { row1; row2; col1; col2 }
     in
     match !(ocacont.display_mode) with
     | Flat view -> allocate view
     | Pattern (view, _mode) -> allocate view
   in
 
-  (*
-    this function sets the location and size of the frame used for the contour of the keyboard drawing
-    this frame is drawn AFTER the keyboard, be wary of invalid coordinates that might overlap with the drawing ctx
-   *)
   let allocate_frame allocation ocacont =
     let open Types in
     let open LTerm_geom in
     let check_view view =
       match view with
       | Plain _ ->
-        { row1 = allocation.row1 - 1
-        ; row2 = allocation.row2 - 1
-        ; col1 = allocation.col1 - 1
-        ; col2 = allocation.col2 + 1
-        }
+        { row1 = allocation.row1 - 1; row2 = allocation.row2 - 1;
+          col1 = allocation.col1 - 1; col2 = allocation.col2 + 1 }
       | Fretted _ ->
-        { row1 = allocation.row1 + 1
-        ; row2 = allocation.row2 + 1
-        ; col1 = allocation.col1 + 1
-        ; col2 = allocation.col2 + 1
-        }
+        { row1 = allocation.row1 + 1; row2 = allocation.row2 + 1;
+          col1 = allocation.col1 + 1; col2 = allocation.col2 + 1 }
       | Interline _ ->
-        { row1 = allocation.row1 + 1
-        ; row2 = allocation.row2
-        ; col1 = allocation.col1
-        ; col2 = allocation.col2
-        }
+        { row1 = allocation.row1 + 1; row2 = allocation.row2;
+          col1 = allocation.col1; col2 = allocation.col2 }
     in
     match !(ocacont.display_mode) with
     | Flat view -> check_view view
@@ -206,289 +158,253 @@ class frame_board ocamuse_context =
     inherit LTerm_widget.frame as super
 
     val mutable fretboard = new fretboard_widget ocamuse_context
-
     val ocamuse_context = ocamuse_context
 
     method! draw ctx focused =
       let open LTerm_draw in
-      clear ctx;
       let open LTerm_style in
-      (* outerframe *)
-      draw_frame ctx self#allocation
-        ~style:{ none with foreground = Some blue }
-        Heavy;
-      (* label print *)
+      clear ctx;
+      draw_frame ctx self#allocation ~style:{ none with foreground = Some blue } Heavy;
       super#draw ctx focused;
-      (* zone allocation for the fretboard *)
       let fb_allocation = allocate_view_ctx ctx ocamuse_context in
       let frame_allocation = allocate_frame fb_allocation ocamuse_context in
       let sub_ctx = sub ctx fb_allocation in
       Display.select_view sub_ctx ocamuse_context;
-      (* frame autour de la fretboard selon la projection *)
       draw_frame ctx frame_allocation
-        ~style:
-          { none with background = Some default; foreground = Some default }
-        Light
+        ~style:{ none with background = Some default; foreground = Some default } Light
 
     initializer
       self#set fretboard;
-      (* Assign the widget to the frame *)
-      self#set_label ~alignment:H_align_center " Fretboard View ";
+      self#set_label ~alignment:H_align_center " Fretboard ";
       self#on_event (fun event ->
         let open LTerm_key in
         match event with
-        | Key { code = Escape; _ } ->
-          (* Signal termination *)
-          super#send_event event;
-          false
+        | Key { code = Escape; _ } -> super#send_event event; false
         | Key { code = Prev_page; _ }
         | Key { code = Next_page; _ }
         | Key { code = Backspace; _ }
-        | Key { code = Enter; _ } ->
-          (* Propagate the event to the fretboard widget *)
-          fretboard#send_event event;
-          true
-        | _ -> false )
+        | Key { code = Enter; _ } -> fretboard#send_event event; true
+        | _ -> false)
   end
 
-class labeled_frame s =
-  object (self)
-    inherit LTerm_widget.frame
+(** Status bar widget - shows current mode and key info *)
+class status_bar (ocamuse_context : Types.ocamuse_structure) app_state =
+  object
+    inherit LTerm_widget.t "status_bar"
 
-    initializer self#set_label ~alignment:H_align_center s
+    method! size_request = { LTerm_geom.rows = 1; cols = 80 }
+
+    method! draw ctx _focused =
+      let open LTerm_draw in
+      let open LTerm_style in
+      let open LTerm_geom in
+      clear ctx;
+      let { cols; _ } = size ctx in
+
+      (* Mode indicator *)
+      let mode_str = App_state.mode_name app_state in
+      let root_str = Pp.NOTES.FMT.sprint_note ocamuse_context.root_note in
+      let scale_mode = match ocamuse_context.mode with
+        | Types.C_mode -> "Ion" | Types.D_mode -> "Dor" | Types.E_mode -> "Phr"
+        | Types.F_mode -> "Lyd" | Types.G_mode -> "Mix" | Types.A_mode -> "Aeo"
+        | Types.B_mode -> "Loc"
+      in
+      let status = Printf.sprintf " [%s] Key: %s %s | v:View h:Help t:Key u:Tuning m:Mode k:Theme Esc:Quit "
+        mode_str root_str scale_mode
+      in
+      let len = min (String.length status) cols in
+      for i = 0 to len - 1 do
+        LTerm_draw.draw_char ctx 0 i (Zed_char.unsafe_of_char status.[i])
+          ~style:{ none with foreground = Some black; background = Some white }
+      done
   end
 
+(** Main application container - Multi-view architecture *)
 class main_box ocamuse_context exit push_layer pop_layer =
   object (self)
     inherit LTerm_widget.vbox
 
     val app_state = App_state.make ocamuse_context
-
     val fb_frame = new frame_board ocamuse_context
 
-    val top = new LTerm_widget.vbox
+    (* Main content area - hbox for side panel + fretboard *)
+    val main_content = new LTerm_widget.hbox
 
-    val mutable help_panel = new Widgets.help_panel (App_state.make ocamuse_context)
+    (* Side panel frame for multi-view *)
+    val side_panel_frame = new LTerm_widget.frame
 
-    val mutable context_panel = new Widgets.context_panel ocamuse_context (App_state.make ocamuse_context)
+    (* Status bar at bottom *)
+    val mutable status_bar_widget = None
 
-    val bottom = new LTerm_widget.hbox
+    (* Multi-view state *)
+    val mutable harmony_widget : LTerm_widget.t option = None
+    val mutable side_panel_visible = false
 
-    val bottom_left_frame = new LTerm_widget.frame
+    method private show_harmony_panel =
+      if not side_panel_visible then begin
+        let harmony_content : Multi_view.Panel.harmony_content = {
+          current_key = None;
+          current_chord = None;
+          suggestions = [];
+          progression = [];
+          selected_suggestion = None;
+        } in
+        let panel : Multi_view.Panel.panel = {
+          id = "harmony_explorer";
+          mode = Multi_view.Panel.HarmonyExplorer;
+          content = Multi_view.Panel.HarmonyContent harmony_content;
+          position = Multi_view.Panel.Left 40;
+          sync_mode = Multi_view.Panel.Watch;
+          visible = true;
+          focused = true;
+        } in
+        let widget = Multi_view_views.Harmony_view.create_widget panel in
+        harmony_widget <- Some (widget :> LTerm_widget.t);
+        main_content#remove fb_frame;
+        side_panel_frame#set (widget :> LTerm_widget.t);
+        side_panel_frame#set_label ~alignment:LTerm_geom.H_align_center " Harmony Explorer ";
+        main_content#add ~expand:false side_panel_frame;
+        main_content#add ~expand:true fb_frame;
+        side_panel_visible <- true
+      end
 
-    val bottom_right_frame = new LTerm_widget.frame
+    method private hide_harmony_panel =
+      if side_panel_visible then begin
+        main_content#remove side_panel_frame;
+        side_panel_visible <- false;
+        harmony_widget <- None
+      end
 
     initializer
-      (* Create widgets with app_state *)
-      help_panel <- new Widgets.help_panel app_state;
-      context_panel <- new Widgets.context_panel ocamuse_context app_state;
+      (* Create status bar *)
+      let sb = new status_bar ocamuse_context app_state in
+      status_bar_widget <- Some sb;
 
-      (* put fretboard display in frame and on top *)
-      top#add fb_frame;
+      (* Main content starts with just the fretboard *)
+      main_content#add ~expand:true fb_frame;
 
-      (* Bottom layout: help on left (in frame), context on right (in frame) *)
-      bottom_left_frame#set (help_panel :> LTerm_widget.t);
-      bottom_right_frame#set (context_panel :> LTerm_widget.t);
-      bottom#add ~expand:true bottom_left_frame;
-      bottom#add ~expand:true bottom_right_frame;
-
-      (* display top and then bottom part of the screen *)
-      self#add top;
-      self#add bottom;
+      (* Layout: main content area + status bar *)
+      self#add ~expand:true main_content;
+      self#add ~expand:false (sb :> LTerm_widget.t);
 
       self#on_event (fun event ->
         let open LTerm_key in
         let open LTerm_event in
 
-        (* Global handlers that work in any mode *)
-        match event with
-        | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'r' ->
-          (* Reset to tonality highlighting *)
-          ocamuse_context.highlight_source <- Types.Tonality (ocamuse_context.mode, ocamuse_context.root_note);
-          let view = match !(ocamuse_context.display_mode) with
-            | Types.Flat v -> v
-            | Types.Pattern (v, _) -> v
-          in
-          ocamuse_context.display_mode := Types.Pattern (view, ocamuse_context.mode);
-          self#queue_draw;
-          true
-        | Key { code = Char c; _ } when Uchar.to_int c = Char.code '?' || Uchar.to_int c = Char.code 'h' ->
-          if !(app_state.keybindings_modal_visible) then begin
-            (* Already visible, close it *)
-            App_state.toggle_keybindings_modal app_state;
-            pop_layer ();
-            true
-          end else begin
-            (* Not visible, open it *)
-            App_state.toggle_keybindings_modal app_state;
-            let close_fn () =
-              App_state.toggle_keybindings_modal app_state;
-              pop_layer ()
-            in
-            let modal = new Widgets.keybindings_modal close_fn in
-            (push_layer modal) ();
-            true
-          end
-        | _ ->
-
-        (* Route events based on app state *)
         match !(app_state.mode) with
         | App_state.Normal -> begin
           match event with
           | Key { code = Escape; _ } ->
             exit ();
             true
+
+          | Key { code = Char c; control = false; _ } when Uchar.to_int c = Char.code 'v' ->
+            (* Toggle multi-view panel *)
+            App_state.enter_multi_view app_state;
+            self#show_harmony_panel;
+            self#queue_draw;
+            true
+
+          | Key { code = Char c; control = false; _ } when Uchar.to_int c = Char.code 'h' || Uchar.to_int c = Char.code '?' ->
+            (* Show help modal *)
+            if !(app_state.keybindings_modal_visible) then begin
+              App_state.toggle_keybindings_modal app_state;
+              pop_layer ();
+              true
+            end else begin
+              App_state.toggle_keybindings_modal app_state;
+              let close_fn () =
+                App_state.toggle_keybindings_modal app_state;
+                pop_layer ()
+              in
+              let modal = new Widgets.keybindings_modal close_fn in
+              (push_layer modal) ();
+              true
+            end
+
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 't' ->
             App_state.enter_tonality_selection app_state;
-            (* Show tonality selector widget *)
-            (match !(app_state.mode) with
-            | App_state.TonalitySelection tstate ->
-              let widget = new Selectors.tonality_selector_widget tstate app_state in
-              bottom_left_frame#set (widget :> LTerm_widget.t)
-            | _ -> ());
             self#queue_draw;
             true
+
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'u' ->
             App_state.enter_tuning_selection app_state;
-            (* Show tuning selector widget *)
-            (match !(app_state.mode) with
-            | App_state.TuningSelection tstate ->
-              let widget = new Selectors.tuning_selector_widget tstate app_state in
-              bottom_left_frame#set (widget :> LTerm_widget.t)
-            | _ -> ());
             self#queue_draw;
             true
-          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'a' ->
-            (* Enter arpeggio mode *)
-            App_state.enter_arpeggio_mode app_state;
-            (match !(app_state.mode) with
-            | App_state.ArpeggioMode astate ->
-              let widget = new Selectors.arpeggio_widget astate app_state ocamuse_context in
-              bottom_left_frame#set (widget :> LTerm_widget.t)
-            | _ -> ());
-            self#queue_draw;
-            true
-          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'c' ->
-            (* Enter chord mode *)
-            App_state.enter_chord_mode app_state;
-            (match !(app_state.mode) with
-            | App_state.ChordMode cstate ->
-              let widget = new Selectors.chord_widget cstate app_state ocamuse_context in
-              bottom_left_frame#set (widget :> LTerm_widget.t)
-            | _ -> ());
-            self#queue_draw;
-            true
-          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'd' ->
-            (* Toggle debug mode *)
-            App_state.toggle_debug app_state;
-            self#queue_draw;
-            true
+
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'm' ->
             (* Cycle through modes *)
             let next_mode = match ocamuse_context.mode with
-              | Types.C_mode -> Types.D_mode
-              | Types.D_mode -> Types.E_mode
-              | Types.E_mode -> Types.F_mode
-              | Types.F_mode -> Types.G_mode
-              | Types.G_mode -> Types.A_mode
-              | Types.A_mode -> Types.B_mode
+              | Types.C_mode -> Types.D_mode | Types.D_mode -> Types.E_mode
+              | Types.E_mode -> Types.F_mode | Types.F_mode -> Types.G_mode
+              | Types.G_mode -> Types.A_mode | Types.A_mode -> Types.B_mode
               | Types.B_mode -> Types.C_mode
             in
             ocamuse_context.mode <- next_mode;
             self#queue_draw;
             true
+
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'k' ->
             (* Cycle color theme *)
             ocamuse_context.color_theme <- Color_theme.cycle_theme ocamuse_context.color_theme;
             self#queue_draw;
             true
-          | Key { code = Tab; _ } ->
-            App_state.cycle_focus app_state;
+
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'r' ->
+            (* Reset to tonality highlighting *)
+            ocamuse_context.highlight_source <- Types.Tonality (ocamuse_context.mode, ocamuse_context.root_note);
+            let view = match !(ocamuse_context.display_mode) with
+              | Types.Flat v -> v | Types.Pattern (v, _) -> v
+            in
+            ocamuse_context.display_mode := Types.Pattern (view, ocamuse_context.mode);
+            self#queue_draw;
+            true
+
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'd' ->
+            App_state.toggle_debug app_state;
+            self#queue_draw;
+            true
+
+          | Key { code = Prev_page; _ }
+          | Key { code = Next_page; _ }
+          | Key { code = Backspace; _ }
+          | Key { code = Enter; _ } ->
+            fb_frame#send_event event;
+            true
+
+          | _ -> false
+        end
+
+        | App_state.MultiView _ ->
+          (match event with
+          | Key { code = Escape; _ } ->
+            self#hide_harmony_panel;
+            App_state.return_to_normal app_state;
+            self#queue_draw;
+            true
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'v' ->
+            self#hide_harmony_panel;
+            App_state.return_to_normal app_state;
             self#queue_draw;
             true
           | Key { code = Prev_page; _ }
           | Key { code = Next_page; _ }
           | Key { code = Backspace; _ }
           | Key { code = Enter; _ } ->
-            (* Propagate to fretboard widget *)
             fb_frame#send_event event;
             true
-          | _ -> false
-        end
+          | _ -> false)
 
         | App_state.TonalitySelection _ ->
           if Selectors.handle_tonality_input app_state event then begin
-            (* Update selector widget with new state *)
-            (match !(app_state.mode) with
-            | App_state.TonalitySelection tstate ->
-              let widget = new Selectors.tonality_selector_widget tstate app_state in
-              bottom_left_frame#set (widget :> LTerm_widget.t)
-            | App_state.Normal ->
-              (* Selection complete, restore help panel *)
-              bottom_left_frame#set (help_panel :> LTerm_widget.t)
-            | _ -> ());
             self#queue_draw;
             true
-          end
-          else false
+          end else false
 
         | App_state.TuningSelection _ ->
           if Selectors.handle_tuning_input app_state event then begin
-            (* Update selector widget with new state *)
-            (match !(app_state.mode) with
-            | App_state.TuningSelection tstate ->
-              let widget = new Selectors.tuning_selector_widget tstate app_state in
-              bottom_left_frame#set (widget :> LTerm_widget.t)
-            | App_state.Normal ->
-              (* Selection complete, restore help panel and redraw fretboard *)
-              bottom_left_frame#set (help_panel :> LTerm_widget.t);
-              fb_frame#queue_draw
-            | _ -> ());
             self#queue_draw;
             true
-          end
-          else false
-
-        | App_state.ChordMode _ ->
-          if Chord_mode.handle_input app_state event then begin
-            (* Update chord widget with new state *)
-            (match !(app_state.mode) with
-            | App_state.ChordMode cstate ->
-              let widget = new Selectors.chord_widget cstate app_state ocamuse_context in
-              bottom_left_frame#set (widget :> LTerm_widget.t)
-            | App_state.Normal ->
-              (* Chord mode exited, restore help panel *)
-              bottom_left_frame#set (help_panel :> LTerm_widget.t)
-            | _ -> ());
-            self#queue_draw;
-            true
-          end
-          else false
-
-        | App_state.ArpeggioMode _ ->
-          if Arpeggio_mode.handle_input app_state event then begin
-            (* Update arpeggio widget with new state *)
-            (match !(app_state.mode) with
-            | App_state.ArpeggioMode astate ->
-              let widget = new Selectors.arpeggio_widget astate app_state ocamuse_context in
-              bottom_left_frame#set (widget :> LTerm_widget.t)
-            | App_state.Normal ->
-              (* Arpeggio mode exited, restore help panel *)
-              bottom_left_frame#set (help_panel :> LTerm_widget.t)
-            | _ -> ());
-            self#queue_draw;
-            true
-          end
-          else false
-
-        | _ ->
-          (* Other modes: Escape returns to normal *)
-          match event with
-          | Key { code = Escape; _ } ->
-            App_state.return_to_normal app_state;
-            bottom_left_frame#set (help_panel :> LTerm_widget.t);
-            self#queue_draw;
-            true
-          | _ -> false
+          end else false
       )
   end

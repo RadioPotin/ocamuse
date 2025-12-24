@@ -1,0 +1,4 @@
+(library
+ (name widgets)
+ (libraries ocaml-music-theory lambda-term lwt zed)
+ (modules mini_fretboard))

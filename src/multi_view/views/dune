@@ -1,0 +1,4 @@
+(library
+ (name multi_view_views)
+ (libraries ocaml-music-theory lambda-term lwt zed multi_view chord_suggestions)
+ (modules harmony_view))
