@@ -74,6 +74,23 @@ class context_panel (ocamuse_ctx : Types.ocamuse_structure) (app_state : App_sta
         let theme_str = Fmt.str "Color Theme: %s" (Color_theme.theme_name ocamuse_ctx.color_theme) in
         draw_line theme_str { none with foreground = Some lmagenta };
 
+        (* Diatonic chords - only for 7-note scales *)
+        incr row;
+        let diatonic = Display.diatonic_triads ocamuse_ctx.scale ocamuse_ctx.root_note in
+        if List.length diatonic > 0 then begin
+          draw_line "Diatonic Chords:" { none with bold = Some true; foreground = Some lcyan };
+          let chord_strs = List.map (fun (note, triad, _chord, degree) ->
+            let roman = Display.degree_to_roman degree triad in
+            let note_str = Pp.NOTES.FMT.sprint_note note in
+            Fmt.str "%s:%s" roman note_str
+          ) diatonic in
+          let line1 = String.concat " " (List.filteri (fun i _ -> i < 4) chord_strs) in
+          let line2 = String.concat " " (List.filteri (fun i _ -> i >= 4) chord_strs) in
+          draw_line line1 { none with foreground = Some lgreen };
+          if String.length line2 > 0 then
+            draw_line line2 { none with foreground = Some lgreen }
+        end;
+
         (* Display mode indicator *)
         incr row;
         let display_str = match !(ocamuse_ctx.display_mode) with
@@ -196,7 +213,9 @@ class keybindings_modal pop_layer_fn =
       draw_line "  t - Change tonality";
       draw_line "  u - Change tuning";
       draw_line "  m - Cycle scales";
+      draw_line "  c - Select chord";
       draw_line "  k - Select color theme";
+      draw_line "  1-7 - Highlight diatonic chord";
       draw_line "  d - Debug borders";
       vbox#add (new LTerm_widget.hline);
 

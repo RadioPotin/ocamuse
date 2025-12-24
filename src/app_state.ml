@@ -6,6 +6,7 @@ type app_mode =
   | TonalitySelection of tonality_state  (** Selecting root note and mode *)
   | TuningSelection of tuning_state  (** Selecting guitar tuning *)
   | ThemeSelection of theme_state  (** Selecting color theme *)
+  | ChordSelection of chord_state  (** Selecting chord for highlighting *)
   | MultiView of multi_view_state  (** Multi-view focus mode with multiple concurrent panels *)
 
 (** State for tonality selection *)
@@ -31,6 +32,23 @@ and theme_state =
   ; theme_index : int  (** Currently highlighted theme *)
   ; preview_active : bool  (** Whether preview is being shown *)
   }
+
+(** State for chord selection *)
+and chord_state =
+  { chord_root : Types.note option  (** Temporary root note being built *)
+  ; chord_type : Types.chord option  (** Selected chord type *)
+  ; chord_category : Types.chord_category  (** Current category being browsed *)
+  ; chord_category_index : int  (** Index within category list *)
+  ; chord_index : int  (** Index within current category's chords *)
+  ; chord_step : chord_selection_step  (** Current step in selection process *)
+  }
+
+(** Selection steps for chord *)
+and chord_selection_step =
+  | ChordSelectingRoot  (** Choosing root note (A-G) *)
+  | ChordSelectingAlteration  (** Choosing sharp/flat *)
+  | ChordSelectingCategory  (** Choosing chord category *)
+  | ChordSelectingType  (** Choosing specific chord within category *)
 
 (** State for multi-view mode *)
 and multi_view_state =
@@ -115,6 +133,17 @@ let enter_multi_view state =
       ; show_panel_controls = true
       }
 
+let enter_chord_selection state =
+  state.mode :=
+    ChordSelection
+      { chord_root = None
+      ; chord_type = None
+      ; chord_category = Types.Triads
+      ; chord_category_index = 0
+      ; chord_index = 0
+      ; chord_step = ChordSelectingRoot
+      }
+
 let enter_theme_selection state =
   (* Build list of all themes: built-in + custom palettes *)
   let all_themes =
@@ -166,4 +195,5 @@ let mode_name state =
   | TonalitySelection _ -> "Tonality Selection"
   | TuningSelection _ -> "Tuning Selection"
   | ThemeSelection _ -> "Theme Selection"
+  | ChordSelection _ -> "Chord Selection"
   | MultiView _ -> "Multi-View"

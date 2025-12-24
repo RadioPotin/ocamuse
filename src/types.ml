@@ -62,24 +62,38 @@ type note =
   ; alteration : int
   }
 
+(** Chord categories for grouping chords in the UI *)
+type chord_category =
+  | Triads
+  | Suspended
+  | Sixths
+  | Sevenths
+  | Extended
+  | AlteredChords
+
+(** Comprehensive chord type supporting 35+ chord qualities *)
 type chord =
-  | Major
-  | Minor
-  | Dimin
-  | Augment
-  | Suspend2
-  | Suspend4
-  | Major7
-  | Domin7
-  | Minor7
-  | HalfDim7
-  | Sixth
-  | MinorSixth
+  (* Triads - 4 types *)
+  | ChordMajor | ChordMinor | ChordDimin | ChordAugment
+  (* Suspended - 2 types *)
+  | ChordSus2 | ChordSus4
+  (* Sixths - 2 types *)
+  | ChordSixth | ChordMinorSixth
+  (* Sevenths - 8 types *)
+  | ChordMaj7 | ChordDom7 | ChordMin7 | ChordHalfDim7
+  | ChordDim7 | ChordMinMaj7 | ChordAug7 | ChordDom7Sus4
+  (* Extended - 13 types *)
+  | ChordMaj9 | ChordDom9 | ChordMin9 | ChordAdd9 | ChordMinAdd9 | ChordSixNine
+  | ChordDom11 | ChordMin11 | ChordMaj11 | ChordAdd11
+  | ChordDom13 | ChordMin13 | ChordMaj13
+  (* Altered - 8 types *)
+  | ChordDom7Sharp9 | ChordDom7Flat9 | ChordDom7Sharp5 | ChordDom7Flat5
+  | ChordDom7Sharp5Sharp9 | ChordDom7Flat5Flat9 | ChordDom7Alt | ChordDom7Flat13
 
 type diatonic_triad =
-  | Major
-  | Minor
-  | Diminished
+  | TriadMajor
+  | TriadMinor
+  | TriadDiminished
 
 type tuning = note list
 

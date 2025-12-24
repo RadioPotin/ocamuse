@@ -540,3 +540,289 @@ class theme_selector_widget (tstate : App_state.theme_state) (app_state : App_st
     method! can_focus = false
   end
 
+(** Handle chord selection input *)
+let handle_chord_input state event =
+  let open LTerm_event in
+  let open Types in
+  match !(state.App_state.mode) with
+  | App_state.ChordSelection cstate -> begin
+    match event with
+    | Key { code = Escape; _ } ->
+      App_state.return_to_normal state;
+      true
+    | Key { code = Char c; _ } ->
+      let ch_code = Uchar.to_int c in
+      if ch_code > 127 then false
+      else begin
+      let ch = Char.chr ch_code in
+      (* Root field accepts a-g *)
+      if (cstate.chord_step = App_state.ChordSelectingRoot ||
+          cstate.chord_step = App_state.ChordSelectingAlteration) &&
+         ((ch >= 'a' && ch <= 'g') || (ch >= 'A' && ch <= 'G')) then begin
+        match Conv.base_of_char ch with
+        | Ok base ->
+          let new_state =
+            { cstate with
+              chord_root = Some { base; alteration = 0 };
+              chord_step = App_state.ChordSelectingAlteration
+            }
+          in
+          state.mode := App_state.ChordSelection new_state;
+          true
+        | Error _ -> false
+      end
+      (* Alteration accepts # and b *)
+      else if cstate.chord_step = App_state.ChordSelectingAlteration && ch = '#' then begin
+        match cstate.chord_root with
+        | Some note ->
+          let new_state =
+            { cstate with chord_root = Some { note with alteration = note.alteration + 1 } }
+          in
+          state.mode := App_state.ChordSelection new_state;
+          true
+        | None -> false
+      end
+      else if cstate.chord_step = App_state.ChordSelectingAlteration && ch = 'b' then begin
+        match cstate.chord_root with
+        | Some note ->
+          let new_state =
+            { cstate with chord_root = Some { note with alteration = note.alteration - 1 } }
+          in
+          state.mode := App_state.ChordSelection new_state;
+          true
+        | None -> false
+      end
+      else false
+      end
+    | Key { code = Enter; _ } -> begin
+      match cstate.chord_step with
+      | App_state.ChordSelectingRoot | App_state.ChordSelectingAlteration ->
+        (* Advance to category selection if root is set *)
+        (match cstate.chord_root with
+        | Some _ ->
+          let new_state = { cstate with chord_step = App_state.ChordSelectingCategory } in
+          state.mode := App_state.ChordSelection new_state;
+          true
+        | None -> false)
+      | App_state.ChordSelectingCategory ->
+        (* Advance to chord type selection within category *)
+        let new_state = { cstate with chord_step = App_state.ChordSelectingType } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+      | App_state.ChordSelectingType ->
+        (* Apply the chord selection *)
+        (match cstate.chord_root with
+        | Some root ->
+          let chords = Display.chords_in_category cstate.chord_category in
+          let chord = List.nth chords cstate.chord_index in
+          state.context.highlight_source <- Types.Chord (root, chord);
+          App_state.return_to_normal state;
+          true
+        | None -> false)
+    end
+    | Key { code = Up; _ } -> begin
+      match cstate.chord_step with
+      | App_state.ChordSelectingRoot -> true  (* Stay at top *)
+      | App_state.ChordSelectingAlteration ->
+        let new_state = { cstate with chord_step = App_state.ChordSelectingRoot } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+      | App_state.ChordSelectingCategory ->
+        (* Move to previous category *)
+        let num_cats = List.length Display.all_chord_categories in
+        let new_idx = if cstate.chord_category_index > 0 then cstate.chord_category_index - 1 else num_cats - 1 in
+        let new_cat = List.nth Display.all_chord_categories new_idx in
+        let new_state = { cstate with
+          chord_category_index = new_idx;
+          chord_category = new_cat;
+          chord_index = 0  (* Reset chord selection when changing category *)
+        } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+      | App_state.ChordSelectingType ->
+        (* Move to previous chord in category *)
+        let chords = Display.chords_in_category cstate.chord_category in
+        let num_chords = List.length chords in
+        let new_idx = if cstate.chord_index > 0 then cstate.chord_index - 1 else num_chords - 1 in
+        let new_state = { cstate with chord_index = new_idx } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+    end
+    | Key { code = Down; _ } -> begin
+      match cstate.chord_step with
+      | App_state.ChordSelectingRoot ->
+        let new_state = { cstate with chord_step = App_state.ChordSelectingAlteration } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+      | App_state.ChordSelectingAlteration ->
+        (match cstate.chord_root with
+        | Some _ ->
+          let new_state = { cstate with chord_step = App_state.ChordSelectingCategory } in
+          state.mode := App_state.ChordSelection new_state;
+          true
+        | None -> true)
+      | App_state.ChordSelectingCategory ->
+        (* Move to next category *)
+        let num_cats = List.length Display.all_chord_categories in
+        let new_idx = (cstate.chord_category_index + 1) mod num_cats in
+        let new_cat = List.nth Display.all_chord_categories new_idx in
+        let new_state = { cstate with
+          chord_category_index = new_idx;
+          chord_category = new_cat;
+          chord_index = 0
+        } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+      | App_state.ChordSelectingType ->
+        (* Move to next chord in category *)
+        let chords = Display.chords_in_category cstate.chord_category in
+        let num_chords = List.length chords in
+        let new_idx = (cstate.chord_index + 1) mod num_chords in
+        let new_state = { cstate with chord_index = new_idx } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+    end
+    | Key { code = Left; _ } -> begin
+      match cstate.chord_step with
+      | App_state.ChordSelectingCategory | App_state.ChordSelectingType ->
+        (* Go back a step *)
+        let new_step = match cstate.chord_step with
+          | App_state.ChordSelectingType -> App_state.ChordSelectingCategory
+          | App_state.ChordSelectingCategory -> App_state.ChordSelectingAlteration
+          | step -> step
+        in
+        let new_state = { cstate with chord_step = new_step } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+      | _ -> false
+    end
+    | Key { code = Right; _ } -> begin
+      match cstate.chord_step with
+      | App_state.ChordSelectingAlteration ->
+        (match cstate.chord_root with
+        | Some _ ->
+          let new_state = { cstate with chord_step = App_state.ChordSelectingCategory } in
+          state.mode := App_state.ChordSelection new_state;
+          true
+        | None -> false)
+      | App_state.ChordSelectingCategory ->
+        let new_state = { cstate with chord_step = App_state.ChordSelectingType } in
+        state.mode := App_state.ChordSelection new_state;
+        true
+      | _ -> false
+    end
+    | _ -> false
+  end
+  | _ -> false
+
+(** Chord selector widget - displays current chord selection state *)
+class chord_selector_widget (cstate : App_state.chord_state) (app_state : App_state.t) =
+  object
+    inherit LTerm_widget.t "chord_selector"
+
+    method! size_request =
+      { LTerm_geom.rows = 18; cols = 70 }
+
+    method! draw ctx _focused =
+      let open LTerm_draw in
+      let open LTerm_style in
+      let open LTerm_geom in
+      clear ctx;
+
+      (* Debug mode: draw border *)
+      if !(app_state.debug_mode) then begin
+        let sz = size ctx in
+        draw_frame ctx { row1 = 0; col1 = 0; row2 = sz.rows - 1; col2 = sz.cols - 1 }
+          ~style:{ none with foreground = Some lmagenta } Light
+      end;
+
+      let { rows; cols } = size ctx in
+      let row = ref 0 in
+
+      let draw_line text style =
+        if !row < rows && cols > 2 then begin
+          draw_text_line ctx !row 1 text style;
+          incr row
+        end
+      in
+
+      draw_line "SELECT CHORD" { none with bold = Some true; foreground = Some lcyan };
+      incr row;
+
+      (* Show current selection *)
+      let root_str = match cstate.chord_root with
+        | Some note -> Pp.NOTES.FMT.sprint_note note
+        | None -> "..."
+      in
+      let category_str = Display.chord_category_name cstate.chord_category in
+      let chords = Display.chords_in_category cstate.chord_category in
+      let chord = List.nth chords cstate.chord_index in
+      let chord_str = Display.chord_name chord in
+
+      (* Highlight active field *)
+      let root_style = match cstate.chord_step with
+        | App_state.ChordSelectingRoot | App_state.ChordSelectingAlteration ->
+            { none with bold = Some true; foreground = Some lgreen }
+        | _ -> { none with foreground = Some white }
+      in
+      let category_style = match cstate.chord_step with
+        | App_state.ChordSelectingCategory ->
+            { none with bold = Some true; foreground = Some lyellow }
+        | _ -> { none with foreground = Some white }
+      in
+      let chord_style = match cstate.chord_step with
+        | App_state.ChordSelectingType ->
+            { none with bold = Some true; foreground = Some lmagenta }
+        | _ -> { none with foreground = Some white }
+      in
+      draw_line (Fmt.str "Root: %s" root_str) root_style;
+      draw_line (Fmt.str "Category: %s" category_str) category_style;
+      draw_line (Fmt.str "Chord: %s" chord_str) chord_style;
+
+      incr row;
+
+      (* Show instructions based on step *)
+      begin match cstate.chord_step with
+      | App_state.ChordSelectingRoot ->
+        draw_line "> Press a-g to set root note" { none with foreground = Some lblue }
+      | App_state.ChordSelectingAlteration ->
+        draw_line "> Press a-g (root), # (sharp), or b (flat)"
+          { none with foreground = Some lblue };
+        draw_line "  Press Enter/Right to continue" { none with foreground = Some white }
+      | App_state.ChordSelectingCategory ->
+        draw_line "> Use Up/Down to browse categories" { none with foreground = Some lblue };
+        incr row;
+        (* Show all categories *)
+        List.iteri (fun i cat ->
+          let name = Display.chord_category_name cat in
+          let prefix = if i = cstate.chord_category_index then "> " else "  " in
+          let style = if i = cstate.chord_category_index then
+            { none with bold = Some true; foreground = Some lyellow }
+          else
+            { none with foreground = Some white }
+          in
+          draw_line (Fmt.str "%s%s" prefix name) style
+        ) Display.all_chord_categories;
+        draw_line "  Press Enter/Right to select chords" { none with foreground = Some white }
+      | App_state.ChordSelectingType ->
+        draw_line "> Use Up/Down to browse chords" { none with foreground = Some lblue };
+        incr row;
+        (* Show chords in current category *)
+        List.iteri (fun i c ->
+          let name = Display.chord_name c in
+          let prefix = if i = cstate.chord_index then "> " else "  " in
+          let style = if i = cstate.chord_index then
+            { none with bold = Some true; foreground = Some lmagenta }
+          else
+            { none with foreground = Some white }
+          in
+          draw_line (Fmt.str "%s%s" prefix name) style
+        ) chords;
+        draw_line "  Press Enter to apply, Left to go back" { none with foreground = Some white }
+      end;
+      incr row;
+      draw_line "Esc to cancel" { none with foreground = Some lcyan }
+
+    method! can_focus = false
+  end
+

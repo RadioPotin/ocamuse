@@ -205,7 +205,7 @@ class status_bar (ocamuse_context : Types.ocamuse_structure) app_state =
       let mode_str = App_state.mode_name app_state in
       let root_str = Pp.NOTES.FMT.sprint_note ocamuse_context.root_note in
       let scale_name = Display.scale_name ocamuse_context.scale in
-      let status = Printf.sprintf " [%s] Key: %s %s | v:View h:Help t:Key u:Tuning m:Scale k:Theme Esc:Quit "
+      let status = Printf.sprintf " [%s] %s %s | 1-7:Diatonic c:Chord t:Key m:Scale ?:Help Esc:Quit "
         mode_str root_str scale_name
       in
       let len = min (String.length status) cols in
@@ -398,6 +398,18 @@ class main_box ocamuse_context exit push_layer pop_layer =
             self#queue_draw;
             true
 
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'c' ->
+            (* Enter chord selection mode *)
+            App_state.enter_chord_selection app_state;
+            let cstate = match !(app_state.mode) with
+              | App_state.ChordSelection cs -> cs
+              | _ -> failwith "Expected ChordSelection"
+            in
+            let widget = new Selectors.chord_selector_widget cstate app_state in
+            self#show_selector_panel (widget :> LTerm_widget.t) " Select Chord ";
+            self#queue_draw;
+            true
+
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'r' ->
             (* Reset to tonality highlighting *)
             ocamuse_context.highlight_source <- Types.Tonality (ocamuse_context.scale, ocamuse_context.root_note);
@@ -407,6 +419,17 @@ class main_box ocamuse_context exit push_layer pop_layer =
             ocamuse_context.display_mode := Types.Pattern (view, ocamuse_context.scale);
             self#queue_draw;
             true
+
+          | Key { code = Char c; _ } when Uchar.to_int c >= Char.code '1' && Uchar.to_int c <= Char.code '7' ->
+            (* Quick select diatonic chord by degree (1-7) *)
+            let degree = Uchar.to_int c - Char.code '0' in
+            let diatonic = Display.diatonic_triads ocamuse_context.scale ocamuse_context.root_note in
+            if List.length diatonic >= degree then begin
+              let (note, _triad, chord, _deg) = List.nth diatonic (degree - 1) in
+              ocamuse_context.highlight_source <- Types.Chord (note, chord);
+              self#queue_draw;
+              true
+            end else false
 
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'd' ->
             App_state.toggle_debug app_state;
@@ -483,6 +506,21 @@ class main_box ocamuse_context exit push_layer pop_layer =
                 (* Refresh widget with updated state - theme preview is automatic *)
                 let widget = new Selectors.theme_selector_widget new_tstate app_state in
                 self#show_selector_panel (widget :> LTerm_widget.t) " Select Theme "
+            | _ -> ());
+            self#queue_draw;
+            true
+          end else false
+
+        | App_state.ChordSelection _ ->
+          if Selectors.handle_chord_input app_state event then begin
+            (* Check if we returned to normal mode *)
+            (match !(app_state.mode) with
+            | App_state.Normal ->
+                self#hide_selector_panel
+            | App_state.ChordSelection new_cstate ->
+                (* Refresh widget with updated state *)
+                let widget = new Selectors.chord_selector_widget new_cstate app_state in
+                self#show_selector_panel (widget :> LTerm_widget.t) " Select Chord "
             | _ -> ());
             self#queue_draw;
             true

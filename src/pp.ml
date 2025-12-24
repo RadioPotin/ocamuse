@@ -40,9 +40,9 @@ module NOTES = struct
       let open Types in
       fun (chord : diatonic_triad) ->
         match chord with
-        | Major -> Fmt.pf fmt ""
-        | Minor -> Fmt.pf fmt "m"
-        | Diminished -> Fmt.pf fmt "dim"
+        | TriadMajor -> Fmt.pf fmt ""
+        | TriadMinor -> Fmt.pf fmt "m"
+        | TriadDiminished -> Fmt.pf fmt "dim"
 
     let print_chord_quality fmt =
       let open Types in
@@ -365,6 +365,17 @@ module OCAMUSE = struct
       | BebopMinor -> "BebopMin" | BebopDorian -> "BebopDor"
     in
     pf fmt "%s" name
+
+  let pp_chord_category fmt = function
+    | Triads -> pf fmt "Triads"
+    | Suspended -> pf fmt "Suspended"
+    | Sixths -> pf fmt "Sixths"
+    | Sevenths -> pf fmt "Sevenths"
+    | Extended -> pf fmt "Extended"
+    | AlteredChords -> pf fmt "Altered"
+
+  let pp_chord fmt chord =
+    pf fmt "%s" (Conv.chord_to_string chord)
 
   let pp_base_colour fmt = function
     | Black -> pf fmt "Black"

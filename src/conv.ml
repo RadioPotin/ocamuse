@@ -2,18 +2,49 @@ let chord_to_string =
   let open Types in
   fun (chord : chord) : string ->
     match chord with
-    | Major -> "maj"
-    | Minor -> "min"
-    | Dimin -> "dim"
-    | Augment -> "aug"
-    | Suspend2 -> "sus2"
-    | Suspend4 -> "sus4"
-    | Major7 -> "maj7"
-    | Domin7 -> "7"
-    | Minor7 -> "min7"
-    | HalfDim7 -> "m7b5"
-    | Sixth -> "6"
-    | MinorSixth -> "m6"
+    (* Triads *)
+    | ChordMajor -> "maj"
+    | ChordMinor -> "min"
+    | ChordDimin -> "dim"
+    | ChordAugment -> "aug"
+    (* Suspended *)
+    | ChordSus2 -> "sus2"
+    | ChordSus4 -> "sus4"
+    (* Sixths *)
+    | ChordSixth -> "6"
+    | ChordMinorSixth -> "m6"
+    (* Sevenths *)
+    | ChordMaj7 -> "maj7"
+    | ChordDom7 -> "7"
+    | ChordMin7 -> "m7"
+    | ChordHalfDim7 -> "m7b5"
+    | ChordDim7 -> "dim7"
+    | ChordMinMaj7 -> "mMaj7"
+    | ChordAug7 -> "aug7"
+    | ChordDom7Sus4 -> "7sus4"
+    (* Extended *)
+    | ChordMaj9 -> "maj9"
+    | ChordDom9 -> "9"
+    | ChordMin9 -> "m9"
+    | ChordAdd9 -> "add9"
+    | ChordMinAdd9 -> "madd9"
+    | ChordSixNine -> "6/9"
+    | ChordDom11 -> "11"
+    | ChordMin11 -> "m11"
+    | ChordMaj11 -> "maj11"
+    | ChordAdd11 -> "add11"
+    | ChordDom13 -> "13"
+    | ChordMin13 -> "m13"
+    | ChordMaj13 -> "maj13"
+    (* Altered *)
+    | ChordDom7Sharp9 -> "7#9"
+    | ChordDom7Flat9 -> "7b9"
+    | ChordDom7Sharp5 -> "7#5"
+    | ChordDom7Flat5 -> "7b5"
+    | ChordDom7Sharp5Sharp9 -> "7#5#9"
+    | ChordDom7Flat5Flat9 -> "7b5b9"
+    | ChordDom7Alt -> "7alt"
+    | ChordDom7Flat13 -> "7b13"
 
 let base_of_char =
   let open Types in
