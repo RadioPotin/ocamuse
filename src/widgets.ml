@@ -213,7 +213,7 @@ class keybindings_modal pop_layer_fn =
       draw_line "  t - Change tonality";
       draw_line "  u - Change tuning";
       draw_line "  m - Cycle scales";
-      draw_line "  c - Select chord";
+      draw_line "  c - Chord lookup";
       draw_line "  k - Select color theme";
       draw_line "  1-7 - Highlight diatonic chord";
       draw_line "  d - Debug borders";

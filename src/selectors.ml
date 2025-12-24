@@ -540,12 +540,12 @@ class theme_selector_widget (tstate : App_state.theme_state) (app_state : App_st
     method! can_focus = false
   end
 
-(** Handle chord selection input *)
-let handle_chord_input state event =
+(** Handle chord lookup input *)
+let handle_chord_lookup_input state event =
   let open LTerm_event in
   let open Types in
   match !(state.App_state.mode) with
-  | App_state.ChordSelection cstate -> begin
+  | App_state.ChordLookup cstate -> begin
     match event with
     | Key { code = Escape; _ } ->
       App_state.return_to_normal state;
@@ -567,7 +567,7 @@ let handle_chord_input state event =
               chord_step = App_state.ChordSelectingAlteration
             }
           in
-          state.mode := App_state.ChordSelection new_state;
+          state.mode := App_state.ChordLookup new_state;
           true
         | Error _ -> false
       end
@@ -578,7 +578,7 @@ let handle_chord_input state event =
           let new_state =
             { cstate with chord_root = Some { note with alteration = note.alteration + 1 } }
           in
-          state.mode := App_state.ChordSelection new_state;
+          state.mode := App_state.ChordLookup new_state;
           true
         | None -> false
       end
@@ -588,7 +588,7 @@ let handle_chord_input state event =
           let new_state =
             { cstate with chord_root = Some { note with alteration = note.alteration - 1 } }
           in
-          state.mode := App_state.ChordSelection new_state;
+          state.mode := App_state.ChordLookup new_state;
           true
         | None -> false
       end
@@ -601,13 +601,13 @@ let handle_chord_input state event =
         (match cstate.chord_root with
         | Some _ ->
           let new_state = { cstate with chord_step = App_state.ChordSelectingCategory } in
-          state.mode := App_state.ChordSelection new_state;
+          state.mode := App_state.ChordLookup new_state;
           true
         | None -> false)
       | App_state.ChordSelectingCategory ->
         (* Advance to chord type selection within category *)
         let new_state = { cstate with chord_step = App_state.ChordSelectingType } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
       | App_state.ChordSelectingType ->
         (* Apply the chord selection *)
@@ -625,7 +625,7 @@ let handle_chord_input state event =
       | App_state.ChordSelectingRoot -> true  (* Stay at top *)
       | App_state.ChordSelectingAlteration ->
         let new_state = { cstate with chord_step = App_state.ChordSelectingRoot } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
       | App_state.ChordSelectingCategory ->
         (* Move to previous category *)
@@ -637,7 +637,7 @@ let handle_chord_input state event =
           chord_category = new_cat;
           chord_index = 0  (* Reset chord selection when changing category *)
         } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
       | App_state.ChordSelectingType ->
         (* Move to previous chord in category *)
@@ -645,20 +645,20 @@ let handle_chord_input state event =
         let num_chords = List.length chords in
         let new_idx = if cstate.chord_index > 0 then cstate.chord_index - 1 else num_chords - 1 in
         let new_state = { cstate with chord_index = new_idx } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
     end
     | Key { code = Down; _ } -> begin
       match cstate.chord_step with
       | App_state.ChordSelectingRoot ->
         let new_state = { cstate with chord_step = App_state.ChordSelectingAlteration } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
       | App_state.ChordSelectingAlteration ->
         (match cstate.chord_root with
         | Some _ ->
           let new_state = { cstate with chord_step = App_state.ChordSelectingCategory } in
-          state.mode := App_state.ChordSelection new_state;
+          state.mode := App_state.ChordLookup new_state;
           true
         | None -> true)
       | App_state.ChordSelectingCategory ->
@@ -671,7 +671,7 @@ let handle_chord_input state event =
           chord_category = new_cat;
           chord_index = 0
         } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
       | App_state.ChordSelectingType ->
         (* Move to next chord in category *)
@@ -679,7 +679,7 @@ let handle_chord_input state event =
         let num_chords = List.length chords in
         let new_idx = (cstate.chord_index + 1) mod num_chords in
         let new_state = { cstate with chord_index = new_idx } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
     end
     | Key { code = Left; _ } -> begin
@@ -692,7 +692,7 @@ let handle_chord_input state event =
           | step -> step
         in
         let new_state = { cstate with chord_step = new_step } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
       | _ -> false
     end
@@ -702,12 +702,12 @@ let handle_chord_input state event =
         (match cstate.chord_root with
         | Some _ ->
           let new_state = { cstate with chord_step = App_state.ChordSelectingCategory } in
-          state.mode := App_state.ChordSelection new_state;
+          state.mode := App_state.ChordLookup new_state;
           true
         | None -> false)
       | App_state.ChordSelectingCategory ->
         let new_state = { cstate with chord_step = App_state.ChordSelectingType } in
-        state.mode := App_state.ChordSelection new_state;
+        state.mode := App_state.ChordLookup new_state;
         true
       | _ -> false
     end
@@ -715,10 +715,10 @@ let handle_chord_input state event =
   end
   | _ -> false
 
-(** Chord selector widget - displays current chord selection state *)
-class chord_selector_widget (cstate : App_state.chord_state) (app_state : App_state.t) =
+(** Chord lookup widget - displays current chord lookup state *)
+class chord_lookup_widget (cstate : App_state.chord_state) (app_state : App_state.t) =
   object
-    inherit LTerm_widget.t "chord_selector"
+    inherit LTerm_widget.t "chord_lookup"
 
     method! size_request =
       { LTerm_geom.rows = 18; cols = 70 }
@@ -746,7 +746,7 @@ class chord_selector_widget (cstate : App_state.chord_state) (app_state : App_st
         end
       in
 
-      draw_line "SELECT CHORD" { none with bold = Some true; foreground = Some lcyan };
+      draw_line "CHORD LOOKUP" { none with bold = Some true; foreground = Some lcyan };
       incr row;
 
       (* Show current selection *)

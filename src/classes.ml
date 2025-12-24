@@ -205,7 +205,7 @@ class status_bar (ocamuse_context : Types.ocamuse_structure) app_state =
       let mode_str = App_state.mode_name app_state in
       let root_str = Pp.NOTES.FMT.sprint_note ocamuse_context.root_note in
       let scale_name = Display.scale_name ocamuse_context.scale in
-      let status = Printf.sprintf " [%s] %s %s | 1-7:Diatonic c:Chord t:Key m:Scale ?:Help Esc:Quit "
+      let status = Printf.sprintf " [%s] %s %s | 1-7:Diatonic c:Lookup t:Key m:Scale ?:Help Esc:Quit "
         mode_str root_str scale_name
       in
       let len = min (String.length status) cols in
@@ -399,14 +399,14 @@ class main_box ocamuse_context exit push_layer pop_layer =
             true
 
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'c' ->
-            (* Enter chord selection mode *)
-            App_state.enter_chord_selection app_state;
+            (* Enter chord lookup mode *)
+            App_state.enter_chord_lookup app_state;
             let cstate = match !(app_state.mode) with
-              | App_state.ChordSelection cs -> cs
-              | _ -> failwith "Expected ChordSelection"
+              | App_state.ChordLookup cs -> cs
+              | _ -> failwith "Expected ChordLookup"
             in
-            let widget = new Selectors.chord_selector_widget cstate app_state in
-            self#show_selector_panel (widget :> LTerm_widget.t) " Select Chord ";
+            let widget = new Selectors.chord_lookup_widget cstate app_state in
+            self#show_selector_panel (widget :> LTerm_widget.t) " Chord Lookup ";
             self#queue_draw;
             true
 
@@ -511,16 +511,16 @@ class main_box ocamuse_context exit push_layer pop_layer =
             true
           end else false
 
-        | App_state.ChordSelection _ ->
-          if Selectors.handle_chord_input app_state event then begin
+        | App_state.ChordLookup _ ->
+          if Selectors.handle_chord_lookup_input app_state event then begin
             (* Check if we returned to normal mode *)
             (match !(app_state.mode) with
             | App_state.Normal ->
                 self#hide_selector_panel
-            | App_state.ChordSelection new_cstate ->
+            | App_state.ChordLookup new_cstate ->
                 (* Refresh widget with updated state *)
-                let widget = new Selectors.chord_selector_widget new_cstate app_state in
-                self#show_selector_panel (widget :> LTerm_widget.t) " Select Chord "
+                let widget = new Selectors.chord_lookup_widget new_cstate app_state in
+                self#show_selector_panel (widget :> LTerm_widget.t) " Chord Lookup "
             | _ -> ());
             self#queue_draw;
             true

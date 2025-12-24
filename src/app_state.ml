@@ -6,7 +6,7 @@ type app_mode =
   | TonalitySelection of tonality_state  (** Selecting root note and mode *)
   | TuningSelection of tuning_state  (** Selecting guitar tuning *)
   | ThemeSelection of theme_state  (** Selecting color theme *)
-  | ChordSelection of chord_state  (** Selecting chord for highlighting *)
+  | ChordLookup of chord_state  (** Chord lookup - find and highlight any chord *)
   | MultiView of multi_view_state  (** Multi-view focus mode with multiple concurrent panels *)
 
 (** State for tonality selection *)
@@ -133,9 +133,9 @@ let enter_multi_view state =
       ; show_panel_controls = true
       }
 
-let enter_chord_selection state =
+let enter_chord_lookup state =
   state.mode :=
-    ChordSelection
+    ChordLookup
       { chord_root = None
       ; chord_type = None
       ; chord_category = Types.Triads
@@ -195,5 +195,5 @@ let mode_name state =
   | TonalitySelection _ -> "Tonality Selection"
   | TuningSelection _ -> "Tuning Selection"
   | ThemeSelection _ -> "Theme Selection"
-  | ChordSelection _ -> "Chord Selection"
+  | ChordLookup _ -> "Chord Lookup"
   | MultiView _ -> "Multi-View"
