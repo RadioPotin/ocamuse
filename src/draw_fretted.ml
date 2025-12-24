@@ -25,8 +25,9 @@ module FRETTED = struct
     let open LTerm_style in
     let note = struc.fretboard.(j).(i) in
     let note_string = Pp.FRETBOARD.FMT.stringify Pp.NOTES.FMT.print_note note in
-    (* Note is diatonic if it exists in the degree table *)
-    let bold = Hashtbl.mem struc.notes_to_degree_tbl note in
+    (* Note is diatonic if its pitch class exists in the degree table *)
+    let pitch_class = Conv.note_to_int note in
+    let bold = Hashtbl.mem struc.notes_to_degree_tbl pitch_class in
     let note_color = Color.find_color struc note in
     let style = { none with bold = Some bold; foreground = Some note_color } in
     WRITE.writerate struc style note_string;

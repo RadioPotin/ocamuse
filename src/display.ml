@@ -48,23 +48,13 @@ let build_tonality mode root =
   done;
   Array.to_list scale
 
-(** Build degree table: maps notes to their scale degree (0-6) *)
+(** Build degree table: maps pitch class (0-11) to scale degree (0-6) *)
 let build_degree_tbl tonality =
   let tbl = Hashtbl.create 12 in
   List.iteri (fun degree note ->
-    Hashtbl.add tbl note degree;
-    (* Add enharmonic equivalents *)
-    let open Types in
-    if note.alteration = 1 then
-      let enharmonic_base = match note.base with
-        | C -> D | D -> E | E -> F | F -> G | G -> A | A -> B | B -> C
-      in
-      Hashtbl.add tbl { base = enharmonic_base; alteration = -1 } degree
-    else if note.alteration = -1 then
-      let enharmonic_base = match note.base with
-        | C -> B | D -> C | E -> D | F -> E | G -> F | A -> G | B -> A
-      in
-      Hashtbl.add tbl { base = enharmonic_base; alteration = 1 } degree
+    (* Use pitch class as key to handle all enharmonic equivalents *)
+    let pitch_class = Conv.note_to_int note in
+    Hashtbl.replace tbl pitch_class degree
   ) tonality;
   tbl
 

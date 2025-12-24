@@ -191,6 +191,11 @@ class tuning_selector_widget (tstate : App_state.tuning_state) (app_state : App_
   object
     inherit LTerm_widget.t "tuning_selector"
 
+    method! size_request =
+      (* Title + blank + tunings + blank + instructions *)
+      let num_tunings = List.length tstate.available_tunings in
+      { LTerm_geom.rows = 2 + num_tunings + 2; cols = 60 }
+
     method! draw ctx _focused =
       let open LTerm_draw in
       let open LTerm_style in
@@ -242,6 +247,10 @@ class tuning_selector_widget (tstate : App_state.tuning_state) (app_state : App_
 class tonality_selector_widget (tstate : App_state.tonality_state) (app_state : App_state.t) =
   object
     inherit LTerm_widget.t "tonality_selector"
+
+    method! size_request =
+      (* Title + blank + root + mode + blank + instructions (up to 4 lines) + blank + nav *)
+      { LTerm_geom.rows = 12; cols = 60 }
 
     method! draw ctx _focused =
       let open LTerm_draw in

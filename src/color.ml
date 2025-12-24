@@ -64,9 +64,9 @@ let is_equal color colour : bool =
   let s2 = { none with foreground = Some colour } in
   LTerm_style.equal s1 s2
 
-let find_color struc note =
-  let open Types in
-  match Hashtbl.find_opt struc.notes_to_degree_tbl note with
+let find_color (struc : Types.pattern_view_draw_struc) note =
+  let pitch_class = Conv.note_to_int note in
+  match Hashtbl.find_opt struc.notes_to_degree_tbl pitch_class with
   | None -> struc.color
   | Some degree -> Hashtbl.find struc.degree_to_color_tbl degree
 

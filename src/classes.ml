@@ -240,6 +240,30 @@ class main_box ocamuse_context exit push_layer pop_layer =
     val mutable harmony_widget : LTerm_widget.t option = None
     val mutable side_panel_visible = false
 
+    (* Bottom selector panel *)
+    val selector_panel_frame = new LTerm_widget.frame
+    val mutable selector_visible = false
+
+    method private show_selector_panel (widget : LTerm_widget.t) title =
+      if not selector_visible then begin
+        (* Remove status bar, add selector, re-add status bar *)
+        (match status_bar_widget with Some sb -> self#remove (sb :> LTerm_widget.t) | None -> ());
+        selector_panel_frame#set widget;
+        selector_panel_frame#set_label ~alignment:LTerm_geom.H_align_center title;
+        self#add ~expand:false (selector_panel_frame :> LTerm_widget.t);
+        (match status_bar_widget with Some sb -> self#add ~expand:false (sb :> LTerm_widget.t) | None -> ());
+        selector_visible <- true
+      end else begin
+        (* Just update the widget content *)
+        selector_panel_frame#set widget
+      end
+
+    method private hide_selector_panel =
+      if selector_visible then begin
+        self#remove selector_panel_frame;
+        selector_visible <- false
+      end
+
     method private show_harmony_panel =
       if not side_panel_visible then begin
         let harmony_content : Multi_view.Panel.harmony_content = {
@@ -324,11 +348,23 @@ class main_box ocamuse_context exit push_layer pop_layer =
 
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 't' ->
             App_state.enter_tonality_selection app_state;
+            let tstate = match !(app_state.mode) with
+              | App_state.TonalitySelection ts -> ts
+              | _ -> failwith "Expected TonalitySelection"
+            in
+            let widget = new Selectors.tonality_selector_widget tstate app_state in
+            self#show_selector_panel (widget :> LTerm_widget.t) " Select Tonality ";
             self#queue_draw;
             true
 
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'u' ->
             App_state.enter_tuning_selection app_state;
+            let tstate = match !(app_state.mode) with
+              | App_state.TuningSelection ts -> ts
+              | _ -> failwith "Expected TuningSelection"
+            in
+            let widget = new Selectors.tuning_selector_widget tstate app_state in
+            self#show_selector_panel (widget :> LTerm_widget.t) " Select Tuning ";
             self#queue_draw;
             true
 
@@ -397,12 +433,30 @@ class main_box ocamuse_context exit push_layer pop_layer =
 
         | App_state.TonalitySelection _ ->
           if Selectors.handle_tonality_input app_state event then begin
+            (* Check if we returned to normal mode *)
+            (match !(app_state.mode) with
+            | App_state.Normal ->
+                self#hide_selector_panel
+            | App_state.TonalitySelection new_tstate ->
+                (* Refresh widget with updated state *)
+                let widget = new Selectors.tonality_selector_widget new_tstate app_state in
+                self#show_selector_panel (widget :> LTerm_widget.t) " Select Tonality "
+            | _ -> ());
             self#queue_draw;
             true
           end else false
 
         | App_state.TuningSelection _ ->
           if Selectors.handle_tuning_input app_state event then begin
+            (* Check if we returned to normal mode *)
+            (match !(app_state.mode) with
+            | App_state.Normal ->
+                self#hide_selector_panel
+            | App_state.TuningSelection new_tstate ->
+                (* Refresh widget with updated state *)
+                let widget = new Selectors.tuning_selector_widget new_tstate app_state in
+                self#show_selector_panel (widget :> LTerm_widget.t) " Select Tuning "
+            | _ -> ());
             self#queue_draw;
             true
           end else false
