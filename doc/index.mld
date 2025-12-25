@@ -1,17 +1,37 @@
-{0 ocamuse}
+{0 Ocamuse}
 
-{{:TODO/ocamuse} ocamuse} is an {{:https://ocaml.org} OCaml} library/executable to TODO.
+Ocamuse is an interactive terminal-based GUI application for learning
+music theory on fretted instruments (guitar, bass, etc.). Built in OCaml
+using the lambda-term TUI library.
 
-{1:api API}
+{1 Packages}
 
-{!modules:
-Ocamuse
-}
+{2 ocamuse}
 
-{1:private_api Private API}
+The main application - a terminal UI for exploring scales, chords, and
+music theory concepts on a virtual fretboard.
 
-You shouldn't have to use any of these modules, they're used internally only.
+{2 ocaml-music-theory}
 
-{!modules:
-TODO
-}
+A comprehensive music theory library providing types and functions for:
+- Notes and pitch classes
+- Intervals
+- Scales (45+ scales in 7 categories)
+- Chords (35+ chord types)
+- Circle of fifths
+
+See the ocaml-music-theory package documentation for the API.
+
+{1 Getting Started}
+
+Build and run:
+{[
+dune build
+dune exec ocamuse
+]}
+
+Build documentation locally:
+{[
+dune build @doc
+open _build/default/_doc/_html/index.html
+]}
