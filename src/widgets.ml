@@ -216,6 +216,7 @@ class keybindings_modal pop_layer_fn =
       draw_line "  c - Chord lookup";
       draw_line "  p - Chord progression";
       draw_line "  k - Select color theme";
+      draw_line "  f - Cycle fret range (13/17/22/24)";
       draw_line "  1-7 - Highlight diatonic chord";
       draw_line "  d - Debug borders";
       vbox#add (new LTerm_widget.hline);

@@ -201,6 +201,17 @@ let build_tonality scale_type root =
   done;
   Array.to_list scale
 
+(** Build a pitch class to note spelling table from a tonality.
+    Maps pitch class (0-11) to the note with correct enharmonic spelling. *)
+let build_spelling_table scale_type root =
+  let tonality = build_tonality scale_type root in
+  let tbl = Hashtbl.create 12 in
+  List.iter (fun note ->
+    let pc = Conv.note_to_int note in
+    Hashtbl.replace tbl pc note
+  ) tonality;
+  tbl
+
 (** Build degree table: maps pitch class (0-11) to scale degree (0-6) *)
 let build_degree_tbl tonality =
   let tbl = Hashtbl.create 12 in

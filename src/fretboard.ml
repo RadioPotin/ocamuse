@@ -17,15 +17,19 @@ let mapi_down_strings (mapi : int -> Types.note -> Types.note array)
   let strings = aux_mapi_down_strings [] total_nb_of_strings strings_l in
   Array.of_list strings
 
-let get_next_fret_note open_string fret =
+(** Generate note at a fret position, using spelling table for in-scale notes *)
+let get_next_fret_note spelling_tbl open_string fret =
   let note_id = Conv.note_to_int open_string + fret in
-  Conv.int_to_note Sharp note_id
+  let pitch_class = note_id mod 12 in
+  match Hashtbl.find_opt spelling_tbl pitch_class with
+  | Some note -> note  (* Use scale's spelling for in-scale notes *)
+  | None -> Conv.int_to_note Conv.Sharp note_id  (* Default to sharp for chromatic notes *)
 
-let register_and_map_string coord_tbl nb_s range open_note =
+let register_and_map_string spelling_tbl coord_tbl nb_s range open_note =
   let note = ref open_note in
   for fret_number = 0 to range - 1 do
     Hashtbl.replace coord_tbl (fret_number, nb_s) !note;
-    note := get_next_fret_note open_note fret_number
+    note := get_next_fret_note spelling_tbl open_note fret_number
   done;
   Array.init (range - 1) (fun i ->
     match Hashtbl.find_opt coord_tbl (i + 1, nb_s) with
@@ -36,12 +40,13 @@ let init =
   let open Types in
   (* range is the number of frets on the board *)
   (* tuning is a list of notes to start a string from *)
-  fun ~(tuning : tuning) ?(range : int = 13) () : fretboard_data ->
+  (* spelling_tbl maps pitch class to note for correct enharmonic spelling *)
+  fun ~(tuning : tuning) ?(range : int = 13) ?(spelling_tbl : (int, note) Hashtbl.t = Hashtbl.create 0) () : fretboard_data ->
     let coord_tbl = Hashtbl.create 512 in
     let notes =
       mapi_down_strings
         (fun guitar_str_nb open_string ->
-          register_and_map_string coord_tbl guitar_str_nb range open_string )
+          register_and_map_string spelling_tbl coord_tbl guitar_str_nb range open_string )
         tuning
     in
     { notes; coord_lookup = coord_tbl }

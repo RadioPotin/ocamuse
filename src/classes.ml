@@ -443,6 +443,28 @@ class main_box ocamuse_context exit push_layer pop_layer =
               true
             end else false
 
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'f' ->
+            (* Cycle fret range: 13 -> 17 -> 22 -> 24 -> 13 *)
+            let fret_ranges = [13; 17; 22; 24] in
+            let current = ocamuse_context.fret_range in
+            let rec find_next = function
+              | [] -> 13
+              | [_] -> 13
+              | x :: y :: _ when x = current -> y
+              | _ :: rest -> find_next rest
+            in
+            let next_range = find_next fret_ranges in
+            ocamuse_context.fret_range <- next_range;
+            (* Rebuild fretboard with new range and current key's enharmonic spelling *)
+            let spelling_tbl = Display.build_spelling_table ocamuse_context.scale ocamuse_context.root_note in
+            let new_fretboard = Fretboard.init
+              ~tuning:ocamuse_context.tuning
+              ~range:next_range
+              ~spelling_tbl () in
+            ocamuse_context.fretboard <- new_fretboard;
+            self#queue_draw;
+            true
+
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'd' ->
             App_state.toggle_debug app_state;
             self#queue_draw;

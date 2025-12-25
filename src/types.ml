@@ -169,4 +169,5 @@ type ocamuse_structure =
   ; mutable scale : scale_type
   ; mutable highlight_source : highlight_source
   ; mutable color_theme : color_theme
+  ; mutable fret_range : int
   }

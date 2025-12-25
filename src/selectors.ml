@@ -94,6 +94,13 @@ let handle_tonality_input state event =
             | Types.Pattern (v, _) -> v
           in
           state.context.display_mode := Types.Pattern (view, scale);
+          (* Rebuild fretboard with correct enharmonic spelling for this key *)
+          let spelling_tbl = Display.build_spelling_table scale root in
+          let new_fretboard = Fretboard.init
+            ~tuning:state.context.tuning
+            ~range:state.context.fret_range
+            ~spelling_tbl () in
+          state.context.fretboard <- new_fretboard;
           App_state.return_to_normal state;
           true
         | None -> false)
@@ -235,10 +242,12 @@ let handle_tuning_input state event =
       let (_, selected_tuning) = List.nth tstate.available_tunings tstate.selected_index in
       (* Apply the tuning *)
       state.context.tuning <- selected_tuning;
-      (* Rebuild fretboard with new tuning *)
-      let new_fretboard =
-        Fretboard.init ~tuning:selected_tuning ~range:Config.default_fret_range ()
-      in
+      (* Rebuild fretboard with new tuning and current key's enharmonic spelling *)
+      let spelling_tbl = Display.build_spelling_table state.context.scale state.context.root_note in
+      let new_fretboard = Fretboard.init
+        ~tuning:selected_tuning
+        ~range:state.context.fret_range
+        ~spelling_tbl () in
       state.context.fretboard <- new_fretboard;
       App_state.return_to_normal state;
       true
