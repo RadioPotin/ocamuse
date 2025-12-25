@@ -826,3 +826,653 @@ class chord_lookup_widget (cstate : App_state.chord_state) (app_state : App_stat
     method! can_focus = false
   end
 
+(** Handle chord progression input *)
+let handle_progression_input state event =
+  let open LTerm_event in
+  match !(state.App_state.mode) with
+  | App_state.ChordProgression pstate -> begin
+    match pstate.prog_input_mode with
+    | App_state.ProgNavigating -> begin
+      match event with
+      | Key { code = Escape; _ } ->
+        App_state.return_to_normal state;
+        true
+      | Key { code = Left; _ } ->
+        (* Move cursor left *)
+        if pstate.prog_cursor > 0 then begin
+          let new_state = { pstate with prog_cursor = pstate.prog_cursor - 1 } in
+          state.mode := App_state.ChordProgression new_state;
+          (* Update fretboard to show this chord *)
+          if new_state.prog_cursor < List.length pstate.prog_chords then begin
+            let chord = List.nth pstate.prog_chords new_state.prog_cursor in
+            state.context.highlight_source <- Types.Chord (chord.prog_root, chord.prog_chord)
+          end
+        end;
+        true
+      | Key { code = Right; _ } ->
+        (* Move cursor right *)
+        let max_pos = List.length pstate.prog_chords in
+        if pstate.prog_cursor < max_pos - 1 then begin
+          let new_state = { pstate with prog_cursor = pstate.prog_cursor + 1 } in
+          state.mode := App_state.ChordProgression new_state;
+          (* Update fretboard to show this chord *)
+          let chord = List.nth pstate.prog_chords new_state.prog_cursor in
+          state.context.highlight_source <- Types.Chord (chord.prog_root, chord.prog_chord)
+        end;
+        true
+      | Key { code = Enter; _ } ->
+        (* Play current chord (update fretboard) *)
+        if pstate.prog_cursor < List.length pstate.prog_chords then begin
+          let chord = List.nth pstate.prog_chords pstate.prog_cursor in
+          state.context.highlight_source <- Types.Chord (chord.prog_root, chord.prog_chord)
+        end;
+        true
+      | Key { code = Char c; _ } ->
+        let ch_code = Uchar.to_int c in
+        if ch_code > 127 then false
+        else begin
+        let ch = Char.chr ch_code in
+        match ch with
+        | 'a' ->
+          (* Enter AddingChord mode *)
+          let add_state =
+            { App_state.chord_root = None
+            ; chord_type = None
+            ; chord_category = Types.Triads
+            ; chord_category_index = 0
+            ; chord_index = 0
+            ; chord_step = App_state.ChordSelectingRoot
+            }
+          in
+          let new_state = { pstate with
+            prog_input_mode = App_state.ProgAddingChord;
+            prog_add_state = Some add_state
+          } in
+          state.mode := App_state.ChordProgression new_state;
+          true
+        | 'r' ->
+          (* Enter RomanInput mode *)
+          let new_state = { pstate with
+            prog_input_mode = App_state.ProgRomanInput;
+            prog_roman_buffer = ""
+          } in
+          state.mode := App_state.ChordProgression new_state;
+          true
+        | 'l' ->
+          (* Enter BrowsingLibrary mode *)
+          let new_state = { pstate with
+            prog_input_mode = App_state.ProgBrowsingLibrary;
+            prog_library_index = 0
+          } in
+          state.mode := App_state.ChordProgression new_state;
+          true
+        | 'd' ->
+          (* Delete chord at cursor *)
+          if pstate.prog_cursor < List.length pstate.prog_chords then begin
+            let new_chords = List.filteri (fun i _ -> i <> pstate.prog_cursor) pstate.prog_chords in
+            let new_cursor = min pstate.prog_cursor (max 0 (List.length new_chords - 1)) in
+            let new_state = { pstate with prog_chords = new_chords; prog_cursor = new_cursor } in
+            state.mode := App_state.ChordProgression new_state;
+            (* Update fretboard if chords remain *)
+            if new_cursor < List.length new_chords then begin
+              let chord = List.nth new_chords new_cursor in
+              state.context.highlight_source <- Types.Chord (chord.prog_root, chord.prog_chord)
+            end
+          end;
+          true
+        | 'c' ->
+          (* Clear entire progression *)
+          let new_state = { pstate with prog_chords = []; prog_cursor = 0 } in
+          state.mode := App_state.ChordProgression new_state;
+          true
+        | '1' | '2' | '3' | '4' | '5' | '6' | '7' ->
+          (* Quick add diatonic chord *)
+          let degree = Char.code ch - Char.code '0' in
+          let diatonic = Display.diatonic_triads state.context.scale state.context.root_note in
+          if degree <= List.length diatonic then begin
+            let (note, triad, chord, deg) = List.nth diatonic (degree - 1) in
+            let roman = Display.degree_to_roman deg triad in
+            let prog_chord =
+              { App_state.prog_root = note
+              ; prog_chord = chord
+              ; prog_roman = Some roman
+              }
+            in
+            (* Insert at cursor position *)
+            let before, after =
+              let rec split i acc = function
+                | [] -> (List.rev acc, [])
+                | x :: xs ->
+                  if i = 0 then (List.rev acc, x :: xs)
+                  else split (i - 1) (x :: acc) xs
+              in
+              split pstate.prog_cursor [] pstate.prog_chords
+            in
+            let new_chords = before @ [prog_chord] @ after in
+            let new_state = { pstate with
+              prog_chords = new_chords;
+              prog_cursor = pstate.prog_cursor + 1
+            } in
+            state.mode := App_state.ChordProgression new_state;
+            state.context.highlight_source <- Types.Chord (note, chord);
+            true
+          end
+          else false
+        | _ -> false
+        end
+      | _ -> false
+    end
+    | App_state.ProgAddingChord -> begin
+      (* Reuse chord lookup logic but capture result *)
+      match pstate.prog_add_state with
+      | None -> false
+      | Some cstate -> begin
+        match event with
+        | Key { code = Escape; _ } ->
+          (* Cancel and return to navigating *)
+          let new_state = { pstate with
+            prog_input_mode = App_state.ProgNavigating;
+            prog_add_state = None
+          } in
+          state.mode := App_state.ChordProgression new_state;
+          true
+        | Key { code = Char c; _ } ->
+          let ch_code = Uchar.to_int c in
+          if ch_code > 127 then false
+          else begin
+          let ch = Char.chr ch_code in
+          (* Root selection *)
+          if (cstate.chord_step = App_state.ChordSelectingRoot ||
+              cstate.chord_step = App_state.ChordSelectingAlteration) &&
+             ((ch >= 'a' && ch <= 'g') || (ch >= 'A' && ch <= 'G')) then begin
+            match Conv.base_of_char ch with
+            | Ok base ->
+              let new_cstate =
+                { cstate with
+                  chord_root = Some { Types.base; alteration = 0 };
+                  chord_step = App_state.ChordSelectingAlteration
+                }
+              in
+              let new_state = { pstate with prog_add_state = Some new_cstate } in
+              state.mode := App_state.ChordProgression new_state;
+              true
+            | Error _ -> false
+          end
+          else if cstate.chord_step = App_state.ChordSelectingAlteration && ch = '#' then begin
+            match cstate.chord_root with
+            | Some note ->
+              let new_cstate =
+                { cstate with chord_root = Some { note with alteration = note.Types.alteration + 1 } }
+              in
+              let new_state = { pstate with prog_add_state = Some new_cstate } in
+              state.mode := App_state.ChordProgression new_state;
+              true
+            | None -> false
+          end
+          else if cstate.chord_step = App_state.ChordSelectingAlteration && ch = 'b' then begin
+            match cstate.chord_root with
+            | Some note ->
+              let new_cstate =
+                { cstate with chord_root = Some { note with alteration = note.Types.alteration - 1 } }
+              in
+              let new_state = { pstate with prog_add_state = Some new_cstate } in
+              state.mode := App_state.ChordProgression new_state;
+              true
+            | None -> false
+          end
+          else false
+          end
+        | Key { code = Enter; _ } -> begin
+          match cstate.chord_step with
+          | App_state.ChordSelectingRoot | App_state.ChordSelectingAlteration ->
+            (match cstate.chord_root with
+            | Some _ ->
+              let new_cstate = { cstate with chord_step = App_state.ChordSelectingCategory } in
+              let new_state = { pstate with prog_add_state = Some new_cstate } in
+              state.mode := App_state.ChordProgression new_state;
+              true
+            | None -> false)
+          | App_state.ChordSelectingCategory ->
+            let new_cstate = { cstate with chord_step = App_state.ChordSelectingType } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+          | App_state.ChordSelectingType ->
+            (* Add chord to progression *)
+            (match cstate.chord_root with
+            | Some root ->
+              let chords = Display.chords_in_category cstate.chord_category in
+              let chord = List.nth chords cstate.chord_index in
+              (* Analyze in current key *)
+              let roman = Display.analyze_chord_in_key
+                state.context.scale state.context.root_note root chord in
+              let prog_chord =
+                { App_state.prog_root = root
+                ; prog_chord = chord
+                ; prog_roman = roman
+                }
+              in
+              (* Insert at cursor position *)
+              let before, after =
+                let rec split i acc = function
+                  | [] -> (List.rev acc, [])
+                  | x :: xs ->
+                    if i = 0 then (List.rev acc, x :: xs)
+                    else split (i - 1) (x :: acc) xs
+                in
+                split pstate.prog_cursor [] pstate.prog_chords
+              in
+              let new_chords = before @ [prog_chord] @ after in
+              let new_pstate = { pstate with
+                prog_chords = new_chords;
+                prog_cursor = pstate.prog_cursor + 1;
+                prog_input_mode = App_state.ProgNavigating;
+                prog_add_state = None
+              } in
+              state.mode := App_state.ChordProgression new_pstate;
+              state.context.highlight_source <- Types.Chord (root, chord);
+              true
+            | None -> false)
+        end
+        | Key { code = Up; _ } -> begin
+          match cstate.chord_step with
+          | App_state.ChordSelectingRoot -> true
+          | App_state.ChordSelectingAlteration ->
+            let new_cstate = { cstate with chord_step = App_state.ChordSelectingRoot } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+          | App_state.ChordSelectingCategory ->
+            let num_cats = List.length Display.all_chord_categories in
+            let new_idx = if cstate.chord_category_index > 0 then cstate.chord_category_index - 1 else num_cats - 1 in
+            let new_cat = List.nth Display.all_chord_categories new_idx in
+            let new_cstate = { cstate with
+              chord_category_index = new_idx;
+              chord_category = new_cat;
+              chord_index = 0
+            } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+          | App_state.ChordSelectingType ->
+            let chords = Display.chords_in_category cstate.chord_category in
+            let num_chords = List.length chords in
+            let new_idx = if cstate.chord_index > 0 then cstate.chord_index - 1 else num_chords - 1 in
+            let new_cstate = { cstate with chord_index = new_idx } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+        end
+        | Key { code = Down; _ } -> begin
+          match cstate.chord_step with
+          | App_state.ChordSelectingRoot ->
+            let new_cstate = { cstate with chord_step = App_state.ChordSelectingAlteration } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+          | App_state.ChordSelectingAlteration ->
+            (match cstate.chord_root with
+            | Some _ ->
+              let new_cstate = { cstate with chord_step = App_state.ChordSelectingCategory } in
+              let new_state = { pstate with prog_add_state = Some new_cstate } in
+              state.mode := App_state.ChordProgression new_state;
+              true
+            | None -> true)
+          | App_state.ChordSelectingCategory ->
+            let num_cats = List.length Display.all_chord_categories in
+            let new_idx = (cstate.chord_category_index + 1) mod num_cats in
+            let new_cat = List.nth Display.all_chord_categories new_idx in
+            let new_cstate = { cstate with
+              chord_category_index = new_idx;
+              chord_category = new_cat;
+              chord_index = 0
+            } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+          | App_state.ChordSelectingType ->
+            let chords = Display.chords_in_category cstate.chord_category in
+            let num_chords = List.length chords in
+            let new_idx = (cstate.chord_index + 1) mod num_chords in
+            let new_cstate = { cstate with chord_index = new_idx } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+        end
+        | Key { code = Left; _ } -> begin
+          match cstate.chord_step with
+          | App_state.ChordSelectingCategory | App_state.ChordSelectingType ->
+            let new_step = match cstate.chord_step with
+              | App_state.ChordSelectingType -> App_state.ChordSelectingCategory
+              | App_state.ChordSelectingCategory -> App_state.ChordSelectingAlteration
+              | step -> step
+            in
+            let new_cstate = { cstate with chord_step = new_step } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+          | _ -> false
+        end
+        | Key { code = Right; _ } -> begin
+          match cstate.chord_step with
+          | App_state.ChordSelectingAlteration ->
+            (match cstate.chord_root with
+            | Some _ ->
+              let new_cstate = { cstate with chord_step = App_state.ChordSelectingCategory } in
+              let new_state = { pstate with prog_add_state = Some new_cstate } in
+              state.mode := App_state.ChordProgression new_state;
+              true
+            | None -> false)
+          | App_state.ChordSelectingCategory ->
+            let new_cstate = { cstate with chord_step = App_state.ChordSelectingType } in
+            let new_state = { pstate with prog_add_state = Some new_cstate } in
+            state.mode := App_state.ChordProgression new_state;
+            true
+          | _ -> false
+        end
+        | _ -> false
+      end
+    end
+    | App_state.ProgRomanInput -> begin
+      match event with
+      | Key { code = Escape; _ } ->
+        (* Cancel and return to navigating *)
+        let new_state = { pstate with
+          prog_input_mode = App_state.ProgNavigating;
+          prog_roman_buffer = ""
+        } in
+        state.mode := App_state.ChordProgression new_state;
+        true
+      | Key { code = Enter; _ } ->
+        (* Parse roman numerals and add chords *)
+        let parsed = Display.parse_roman_progression
+          state.context.scale state.context.root_note pstate.prog_roman_buffer in
+        if List.length parsed > 0 then begin
+          (* Convert to progression_chords *)
+          let new_prog_chords = List.map (fun (root, chord, roman) ->
+            { App_state.prog_root = root
+            ; prog_chord = chord
+            ; prog_roman = Some roman
+            }
+          ) parsed in
+          (* Insert at cursor position *)
+          let before, after =
+            let rec split i acc = function
+              | [] -> (List.rev acc, [])
+              | x :: xs ->
+                if i = 0 then (List.rev acc, x :: xs)
+                else split (i - 1) (x :: acc) xs
+            in
+            split pstate.prog_cursor [] pstate.prog_chords
+          in
+          let new_chords = before @ new_prog_chords @ after in
+          let new_cursor = pstate.prog_cursor + List.length new_prog_chords in
+          let new_state = { pstate with
+            prog_chords = new_chords;
+            prog_cursor = new_cursor;
+            prog_input_mode = App_state.ProgNavigating;
+            prog_roman_buffer = ""
+          } in
+          state.mode := App_state.ChordProgression new_state;
+          (* Highlight last added chord *)
+          if List.length new_prog_chords > 0 then begin
+            let last = List.nth new_prog_chords (List.length new_prog_chords - 1) in
+            state.context.highlight_source <- Types.Chord (last.prog_root, last.prog_chord)
+          end
+        end;
+        true
+      | Key { code = Backspace; _ } ->
+        (* Remove last character *)
+        let len = String.length pstate.prog_roman_buffer in
+        if len > 0 then begin
+          let new_buffer = String.sub pstate.prog_roman_buffer 0 (len - 1) in
+          let new_state = { pstate with prog_roman_buffer = new_buffer } in
+          state.mode := App_state.ChordProgression new_state
+        end;
+        true
+      | Key { code = Char c; _ } ->
+        let ch_code = Uchar.to_int c in
+        if ch_code > 127 then false
+        else begin
+        let ch = Char.chr ch_code in
+        (* Allow roman numeral characters and spaces *)
+        if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+           (ch >= '0' && ch <= '9') || ch = ' ' || ch = '#' || ch = 'b' then begin
+          let new_buffer = pstate.prog_roman_buffer ^ String.make 1 ch in
+          let new_state = { pstate with prog_roman_buffer = new_buffer } in
+          state.mode := App_state.ChordProgression new_state;
+          true
+        end
+        else false
+        end
+      | _ -> false
+    end
+    | App_state.ProgBrowsingLibrary -> begin
+      match event with
+      | Key { code = Escape; _ } ->
+        (* Cancel and return to navigating *)
+        let new_state = { pstate with prog_input_mode = App_state.ProgNavigating } in
+        state.mode := App_state.ChordProgression new_state;
+        true
+      | Key { code = Up; _ } ->
+        let num_progs = List.length Display.common_progressions in
+        let new_idx = if pstate.prog_library_index > 0
+          then pstate.prog_library_index - 1
+          else num_progs - 1 in
+        let new_state = { pstate with prog_library_index = new_idx } in
+        state.mode := App_state.ChordProgression new_state;
+        true
+      | Key { code = Down; _ } ->
+        let num_progs = List.length Display.common_progressions in
+        let new_idx = (pstate.prog_library_index + 1) mod num_progs in
+        let new_state = { pstate with prog_library_index = new_idx } in
+        state.mode := App_state.ChordProgression new_state;
+        true
+      | Key { code = Enter; _ } ->
+        (* Load selected progression *)
+        let (_, pattern, _) = List.nth Display.common_progressions pstate.prog_library_index in
+        let parsed = Display.parse_roman_progression
+          state.context.scale state.context.root_note pattern in
+        let new_prog_chords = List.map (fun (root, chord, roman) ->
+          { App_state.prog_root = root
+          ; prog_chord = chord
+          ; prog_roman = Some roman
+          }
+        ) parsed in
+        let new_state = { pstate with
+          prog_chords = new_prog_chords;
+          prog_cursor = 0;
+          prog_input_mode = App_state.ProgNavigating
+        } in
+        state.mode := App_state.ChordProgression new_state;
+        (* Highlight first chord if any *)
+        if List.length new_prog_chords > 0 then begin
+          let first = List.hd new_prog_chords in
+          state.context.highlight_source <- Types.Chord (first.prog_root, first.prog_chord)
+        end;
+        true
+      | _ -> false
+    end
+  end
+  | _ -> false
+
+(** Chord progression widget - displays progression horizontally *)
+class progression_widget (pstate : App_state.progression_state) (app_state : App_state.t) =
+  object
+    inherit LTerm_widget.t "progression"
+
+    method! size_request =
+      { LTerm_geom.rows = 20; cols = 90 }
+
+    method! draw ctx _focused =
+      let open LTerm_draw in
+      let open LTerm_style in
+      let open LTerm_geom in
+      clear ctx;
+
+      (* Debug mode: draw border *)
+      if !(app_state.debug_mode) then begin
+        let sz = size ctx in
+        draw_frame ctx { row1 = 0; col1 = 0; row2 = sz.rows - 1; col2 = sz.cols - 1 }
+          ~style:{ none with foreground = Some lmagenta } Light
+      end;
+
+      let { rows; cols } = size ctx in
+      let row = ref 0 in
+
+      let draw_line text style =
+        if !row < rows && cols > 2 then begin
+          draw_text_line ctx !row 1 text style;
+          incr row
+        end
+      in
+
+      (* Title with mode indicator *)
+      let title = match pstate.prog_input_mode with
+        | App_state.ProgNavigating -> "CHORD PROGRESSION"
+        | App_state.ProgAddingChord -> "CHORD PROGRESSION - Adding Chord"
+        | App_state.ProgRomanInput -> "CHORD PROGRESSION - Roman Input"
+        | App_state.ProgBrowsingLibrary -> "CHORD PROGRESSION - Library"
+      in
+      draw_line title { none with bold = Some true; foreground = Some lcyan };
+      incr row;
+
+      (* Current key context *)
+      let key_str = Fmt.str "Key: %s %s"
+        (Pp.NOTES.FMT.sprint_note app_state.context.root_note)
+        (Display.scale_name app_state.context.scale) in
+      draw_line key_str { none with foreground = Some lyellow };
+
+      (* Draw based on mode *)
+      begin match pstate.prog_input_mode with
+      | App_state.ProgNavigating | App_state.ProgAddingChord ->
+        (* Show progression horizontally *)
+        if List.length pstate.prog_chords = 0 then
+          draw_line "(empty - press 'a' to add, 'l' for library, 'r' for Roman input)"
+            { none with foreground = Some white }
+        else begin
+          (* Build chord string *)
+          let chord_strs = List.mapi (fun i chord ->
+            let roman_str = match chord.App_state.prog_roman with
+              | Some r -> r
+              | None -> "?"
+            in
+            let note_str = Pp.NOTES.FMT.sprint_note chord.prog_root in
+            let chord_name = Display.chord_name chord.prog_chord in
+            let display = Fmt.str "%s:%s%s" roman_str note_str chord_name in
+            if i = pstate.prog_cursor then
+              Fmt.str "[%s]" display
+            else
+              display
+          ) pstate.prog_chords in
+          let line = String.concat " | " chord_strs in
+          draw_line line { none with foreground = Some lgreen }
+        end;
+
+        (* Show add chord picker if in AddingChord mode *)
+        if pstate.prog_input_mode = App_state.ProgAddingChord then begin
+          incr row;
+          match pstate.prog_add_state with
+          | Some cstate ->
+            let root_str = match cstate.chord_root with
+              | Some note -> Pp.NOTES.FMT.sprint_note note
+              | None -> "..."
+            in
+            let category_str = Display.chord_category_name cstate.chord_category in
+            let chords = Display.chords_in_category cstate.chord_category in
+            let chord = List.nth chords cstate.chord_index in
+            let chord_str = Display.chord_name chord in
+
+            (* Show current selection with highlighting for active field *)
+            let root_style = match cstate.chord_step with
+              | App_state.ChordSelectingRoot | App_state.ChordSelectingAlteration ->
+                  { none with bold = Some true; foreground = Some lgreen }
+              | _ -> { none with foreground = Some white }
+            in
+            let category_style = match cstate.chord_step with
+              | App_state.ChordSelectingCategory ->
+                  { none with bold = Some true; foreground = Some lyellow }
+              | _ -> { none with foreground = Some white }
+            in
+            let chord_style = match cstate.chord_step with
+              | App_state.ChordSelectingType ->
+                  { none with bold = Some true; foreground = Some lmagenta }
+              | _ -> { none with foreground = Some white }
+            in
+            draw_line (Fmt.str "Root: %s" root_str) root_style;
+            draw_line (Fmt.str "Category: %s" category_str) category_style;
+            draw_line (Fmt.str "Chord: %s" chord_str) chord_style;
+
+            (* Show instructions and lists based on step *)
+            begin match cstate.chord_step with
+            | App_state.ChordSelectingRoot ->
+              draw_line "> Press a-g to set root note" { none with foreground = Some lblue }
+            | App_state.ChordSelectingAlteration ->
+              draw_line "> Press # (sharp), b (flat), or Enter to continue"
+                { none with foreground = Some lblue }
+            | App_state.ChordSelectingCategory ->
+              draw_line "> Up/Down to browse categories:" { none with foreground = Some lblue };
+              List.iteri (fun i cat ->
+                let name = Display.chord_category_name cat in
+                let prefix = if i = cstate.chord_category_index then "> " else "  " in
+                let style = if i = cstate.chord_category_index then
+                  { none with bold = Some true; foreground = Some lyellow }
+                else
+                  { none with foreground = Some white }
+                in
+                draw_line (Fmt.str "%s%s" prefix name) style
+              ) Display.all_chord_categories
+            | App_state.ChordSelectingType ->
+              draw_line "> Up/Down to browse chords, Enter to add:" { none with foreground = Some lblue };
+              List.iteri (fun i c ->
+                let name = Display.chord_name c in
+                let prefix = if i = cstate.chord_index then "> " else "  " in
+                let style = if i = cstate.chord_index then
+                  { none with bold = Some true; foreground = Some lmagenta }
+                else
+                  { none with foreground = Some white }
+                in
+                draw_line (Fmt.str "%s%s" prefix name) style
+              ) chords
+            end
+          | None -> ()
+        end
+
+      | App_state.ProgRomanInput ->
+        (* Show Roman numeral input buffer *)
+        draw_line (Fmt.str "> %s_" pstate.prog_roman_buffer)
+          { none with foreground = Some lgreen };
+        draw_line "Type: I ii III IV V vi vii (Enter to add, Esc to cancel)"
+          { none with foreground = Some lblue }
+
+      | App_state.ProgBrowsingLibrary ->
+        (* Show library list - all 10 progressions *)
+        incr row;
+        List.iteri (fun i (name, pattern, genre) ->
+          let prefix = if i = pstate.prog_library_index then "> " else "  " in
+          let style = if i = pstate.prog_library_index then
+            { none with bold = Some true; foreground = Some lgreen }
+          else
+            { none with foreground = Some white }
+          in
+          draw_line (Fmt.str "%s%s (%s): %s" prefix name genre pattern) style
+        ) Display.common_progressions
+      end;
+
+      incr row;
+      (* Instructions based on mode *)
+      let instructions = match pstate.prog_input_mode with
+        | App_state.ProgNavigating ->
+          "</>:move  a:add  r:roman  l:library  d:del  c:clear  1-7:quick  Esc:exit"
+        | App_state.ProgAddingChord ->
+          "a-g:root  #/b:alter  Up/Down:browse  Enter:add  Esc:cancel"
+        | App_state.ProgRomanInput ->
+          "Type Roman numerals (I ii IV V...)  Enter:add  Esc:cancel"
+        | App_state.ProgBrowsingLibrary ->
+          "Up/Down:browse  Enter:load  Esc:cancel"
+      in
+      draw_line instructions { none with foreground = Some lcyan }
+
+    method! can_focus = false
+  end
+

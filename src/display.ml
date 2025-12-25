@@ -434,6 +434,95 @@ let build_chord_degree_tbl root chord_type =
   ) pitch_classes;
   tbl
 
+(** Analyze a chord in the context of a scale - return Roman numeral if diatonic *)
+let analyze_chord_in_key scale_type key_root chord_root chord_type =
+  let diatonic = diatonic_triads scale_type key_root in
+  let chord_pc = Conv.note_to_int chord_root in
+  (* Find matching diatonic chord *)
+  let rec find_match = function
+    | [] -> None
+    | (note, triad, diatonic_chord, degree) :: rest ->
+      let note_pc = Conv.note_to_int note in
+      if note_pc = chord_pc && diatonic_chord = chord_type then
+        Some (degree_to_roman degree triad)
+      else
+        find_match rest
+  in
+  find_match diatonic
+
+(** Common chord progressions - (name, pattern as Roman numerals, genre) *)
+let common_progressions =
+  [ ("ii-V-I", "ii V I", "Jazz")
+  ; ("I-IV-V-I", "I IV V I", "Pop/Rock")
+  ; ("I-V-vi-IV", "I V vi IV", "Pop")
+  ; ("I-vi-IV-V", "I vi IV V", "50s")
+  ; ("12-Bar Blues", "I I I I IV IV I I V IV I V", "Blues")
+  ; ("vi-ii-V-I", "vi ii V I", "Jazz")
+  ; ("Andalusian", "i VII VI V", "Flamenco")
+  ; ("I-IV-vi-V", "I IV vi V", "Pop")
+  ; ("Pachelbel", "I V vi iii IV I IV V", "Classical")
+  ; ("Minor ii-V-i", "ii V i", "Jazz Minor")
+  ]
+
+(** Parse a single Roman numeral into (degree, is_minor, is_diminished) *)
+let parse_single_roman s =
+  let s = String.trim s in
+  if String.length s = 0 then None
+  else
+    (* Check for diminished marker - use 'o' or 'dim' *)
+    let has_dim_marker str =
+      String.contains str 'o' ||
+      (String.length str > 3 && String.sub str (String.length str - 3) 3 = "dim")
+    in
+    let is_diminished = has_dim_marker s in
+    (* Remove diminished suffix for base extraction *)
+    let base_str =
+      if String.contains s 'o' then
+        String.sub s 0 (String.index s 'o')
+      else if String.length s > 3 && String.sub s (String.length s - 3) 3 = "dim" then
+        String.sub s 0 (String.length s - 3)
+      else s
+    in
+    let base = String.uppercase_ascii base_str in
+    let is_minor = String.length s > 0 && s.[0] >= 'a' && s.[0] <= 'z' in
+    let degree = match base with
+      | "I" -> Some 1
+      | "II" -> Some 2
+      | "III" -> Some 3
+      | "IV" -> Some 4
+      | "V" -> Some 5
+      | "VI" -> Some 6
+      | "VII" -> Some 7
+      | _ -> None
+    in
+    match degree with
+    | Some d -> Some (d, is_minor, is_diminished)
+    | None -> None
+
+(** Parse Roman numerals into chords for a given key *)
+let parse_roman_progression scale_type key_root roman_str =
+  let diatonic = diatonic_triads scale_type key_root in
+  if List.length diatonic = 0 then []
+  else begin
+    let diatonic_arr = Array.of_list diatonic in
+    let tokens = String.split_on_char ' ' roman_str in
+    List.filter_map (fun token ->
+      match parse_single_roman token with
+      | None -> None
+      | Some (degree, is_minor, is_diminished) ->
+        if degree < 1 || degree > 7 then None
+        else begin
+          let (note, _triad, _chord, _deg) = diatonic_arr.(degree - 1) in
+          let chord_type =
+            if is_diminished then Types.ChordDimin
+            else if is_minor then Types.ChordMinor
+            else Types.ChordMajor
+          in
+          Some (note, chord_type, token)
+        end
+    ) tokens
+  end
+
 let select_view ctx ocamuse_context =
   let open Types in
   let bubble_view = function

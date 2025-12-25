@@ -7,6 +7,7 @@ type app_mode =
   | TuningSelection of tuning_state  (** Selecting guitar tuning *)
   | ThemeSelection of theme_state  (** Selecting color theme *)
   | ChordLookup of chord_state  (** Chord lookup - find and highlight any chord *)
+  | ChordProgression of progression_state  (** Building and analyzing chord progressions *)
   | MultiView of multi_view_state  (** Multi-view focus mode with multiple concurrent panels *)
 
 (** State for tonality selection *)
@@ -49,6 +50,30 @@ and chord_selection_step =
   | ChordSelectingAlteration  (** Choosing sharp/flat *)
   | ChordSelectingCategory  (** Choosing chord category *)
   | ChordSelectingType  (** Choosing specific chord within category *)
+
+(** Chord in a progression with analysis *)
+and progression_chord =
+  { prog_root : Types.note  (** Root note of chord *)
+  ; prog_chord : Types.chord  (** Chord type *)
+  ; prog_roman : string option  (** Roman numeral if diatonic, None if borrowed *)
+  }
+
+(** Input modes for progression editing *)
+and progression_input_mode =
+  | ProgNavigating  (** Arrow keys move cursor *)
+  | ProgAddingChord  (** Using chord lookup picker to add *)
+  | ProgRomanInput  (** Typing Roman numerals *)
+  | ProgBrowsingLibrary  (** Browsing preset progressions *)
+
+(** State for chord progression mode *)
+and progression_state =
+  { prog_chords : progression_chord list  (** List of chords in progression *)
+  ; prog_cursor : int  (** Index of selected chord *)
+  ; prog_input_mode : progression_input_mode  (** Current input mode *)
+  ; prog_roman_buffer : string  (** Text buffer for Roman input *)
+  ; prog_library_index : int  (** Index in common progressions list *)
+  ; prog_add_state : chord_state option  (** State for AddingChord sub-mode *)
+  }
 
 (** State for multi-view mode *)
 and multi_view_state =
@@ -144,6 +169,17 @@ let enter_chord_lookup state =
       ; chord_step = ChordSelectingRoot
       }
 
+let enter_chord_progression state =
+  state.mode :=
+    ChordProgression
+      { prog_chords = []
+      ; prog_cursor = 0
+      ; prog_input_mode = ProgNavigating
+      ; prog_roman_buffer = ""
+      ; prog_library_index = 0
+      ; prog_add_state = None
+      }
+
 let enter_theme_selection state =
   (* Build list of all themes: built-in + custom palettes *)
   let all_themes =
@@ -196,4 +232,5 @@ let mode_name state =
   | TuningSelection _ -> "Tuning Selection"
   | ThemeSelection _ -> "Theme Selection"
   | ChordLookup _ -> "Chord Lookup"
+  | ChordProgression _ -> "Progression"
   | MultiView _ -> "Multi-View"

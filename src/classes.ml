@@ -205,7 +205,7 @@ class status_bar (ocamuse_context : Types.ocamuse_structure) app_state =
       let mode_str = App_state.mode_name app_state in
       let root_str = Pp.NOTES.FMT.sprint_note ocamuse_context.root_note in
       let scale_name = Display.scale_name ocamuse_context.scale in
-      let status = Printf.sprintf " [%s] %s %s | 1-7:Diatonic c:Lookup t:Key m:Scale ?:Help Esc:Quit "
+      let status = Printf.sprintf " [%s] %s %s | 1-7:Diatonic c:Lookup p:Prog t:Key m:Scale ?:Help "
         mode_str root_str scale_name
       in
       let len = min (String.length status) cols in
@@ -410,6 +410,18 @@ class main_box ocamuse_context exit push_layer pop_layer =
             self#queue_draw;
             true
 
+          | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'p' ->
+            (* Enter chord progression mode *)
+            App_state.enter_chord_progression app_state;
+            let pstate = match !(app_state.mode) with
+              | App_state.ChordProgression ps -> ps
+              | _ -> failwith "Expected ChordProgression"
+            in
+            let widget = new Selectors.progression_widget pstate app_state in
+            self#show_selector_panel (widget :> LTerm_widget.t) " Chord Progression ";
+            self#queue_draw;
+            true
+
           | Key { code = Char c; _ } when Uchar.to_int c = Char.code 'r' ->
             (* Reset to tonality highlighting *)
             ocamuse_context.highlight_source <- Types.Tonality (ocamuse_context.scale, ocamuse_context.root_note);
@@ -521,6 +533,21 @@ class main_box ocamuse_context exit push_layer pop_layer =
                 (* Refresh widget with updated state *)
                 let widget = new Selectors.chord_lookup_widget new_cstate app_state in
                 self#show_selector_panel (widget :> LTerm_widget.t) " Chord Lookup "
+            | _ -> ());
+            self#queue_draw;
+            true
+          end else false
+
+        | App_state.ChordProgression _ ->
+          if Selectors.handle_progression_input app_state event then begin
+            (* Check if we returned to normal mode *)
+            (match !(app_state.mode) with
+            | App_state.Normal ->
+                self#hide_selector_panel
+            | App_state.ChordProgression new_pstate ->
+                (* Refresh widget with updated state *)
+                let widget = new Selectors.progression_widget new_pstate app_state in
+                self#show_selector_panel (widget :> LTerm_widget.t) " Chord Progression "
             | _ -> ());
             self#queue_draw;
             true

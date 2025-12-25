@@ -214,9 +214,21 @@ class keybindings_modal pop_layer_fn =
       draw_line "  u - Change tuning";
       draw_line "  m - Cycle scales";
       draw_line "  c - Chord lookup";
+      draw_line "  p - Chord progression";
       draw_line "  k - Select color theme";
       draw_line "  1-7 - Highlight diatonic chord";
       draw_line "  d - Debug borders";
+      vbox#add (new LTerm_widget.hline);
+
+      (* Progression mode shortcuts *)
+      draw_line "Progression Mode:";
+      draw_line "  </> - Navigate chords";
+      draw_line "  a - Add chord (picker)";
+      draw_line "  r - Roman numeral input";
+      draw_line "  l - Load from library";
+      draw_line "  d - Delete chord";
+      draw_line "  c - Clear progression";
+      draw_line "  1-7 - Quick add diatonic";
       vbox#add (new LTerm_widget.hline);
 
       draw_line "Press ? or h or Esc to close"
